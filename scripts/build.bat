@@ -33,5 +33,5 @@ if not "%RC%"=="0" (
   echo [atv-break] build FAILED
   exit /b %RC%
 )
-echo [atv-break] APK: app\build\outputs\apk\debug\app-debug.apk
+echo [atv-break] APKs under: app\build\outputs\apk\
 exit /b 0

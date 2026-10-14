@@ -1,5 +1,7 @@
 # atv-break · Android TV 定时休息提醒
 
+[![Build APK](https://github.com/scriptsmay/atv-break/actions/workflows/build-apk.yml/badge.svg)](https://github.com/scriptsmay/atv-break/actions/workflows/build-apk.yml)
+
 电视盒子 APK：统计「连续观看时长」，到点后在屏幕**右下角**弹出浮层提醒，10 秒自动消失，全程不需要遥控器操作。
 
 - 包名：`com.atvbreak`
@@ -153,6 +155,8 @@ adb shell am broadcast -a com.atvbreak.action.RELOAD_CONFIG -n com.atvbreak/.Act
 
 SDK 位置二选一：在 `local.properties` 写 `sdk.dir=<你的 SDK 路径>`（该文件不入库，换机器改这一行即可），或导出 `ANDROID_HOME` 环境变量。
 
+Gradle 由 wrapper 从**官方源** `services.gradle.org` 拉取（仓库里不写任何镜像，这样 CI 开箱可用）。首次构建会下载约 120 MB 发行包，之后缓存在 `GRADLE_USER_HOME/wrapper/dists`，不再联网。中国大陆网络慢时，可把 `gradle/wrapper/gradle-wrapper.properties` 里的 `distributionUrl` 临时改成镜像地址——注意 wrapper **不支持环境变量插值**（它只读该文件的 `distributionUrl` 属性），所以只能改文件本身，改完别提交。
+
 脚本需要 adb / JAVA_HOME 时，按这个顺序找：`scripts\env.bat` → 环境变量 → `PATH`。首次使用复制模板并填自己的路径：
 
 ```bat
@@ -184,6 +188,17 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 ```
 
 或 `scripts\install.bat <盒子IP>`（端口默认 5555，会顺带授悬浮窗权限、加电池白名单并拉起应用）。
+
+### 用 GitHub Actions 打包（不想配本机环境时）
+
+流水线定义在 `.github/workflows/build-apk.yml`，只做一件事——构建 **release APK**（`assembleRelease`，复用 debug 签名，装到盒子上可直接用）：
+
+| 触发方式 | 产出 |
+|---|---|
+| Actions 页面点 **Run workflow**（手动） | 构建产物挂在本次运行的 **Artifacts** 里，需登录 GitHub 下载，默认保留 90 天 |
+| 推送 tag `v*`（如 `v1.1.0`） | 额外自动创建 **GitHub Release**，附上重命名为 `atv-break-<tag>.apk` 的可安装包 |
+
+不配 push / PR 自动触发——个人分支随手提交不会消耗构建机。tag 一旦推送就会对外发布可下载 APK，所以发版由人主动打 tag。
 
 ## 四、首次运行的必做一步：授予悬浮窗权限
 
