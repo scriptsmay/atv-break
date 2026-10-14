@@ -1,0 +1,14 @@
+// 顶层构建脚本：只放 AGP 插件依赖，项目本身零第三方库依赖。
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.5.2'
+    }
+}
+
+tasks.register('clean', Delete) {
+    delete rootProject.buildDir
+}

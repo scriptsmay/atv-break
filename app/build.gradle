@@ -1,0 +1,38 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.atvbreak'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.atvbreak"
+        minSdk 21          // Android 5.0，覆盖主流电视盒子
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            // 纯本地自用：release 直接复用 debug 签名，无需配置正式签名
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+dependencies {
+    // 无第三方依赖：只用 Android 框架 API（org.json 为框架内置）
+}

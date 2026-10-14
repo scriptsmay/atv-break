@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="56dp"
+        android:paddingEnd="56dp"
+        android:paddingTop="40dp"
+        android:paddingBottom="48dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textColor="@color/text_primary"
+            android:textSize="32sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/status_loading"
+            android:textColor="@color/text_secondary"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/tv_permission"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/permission_unknown"
+            android:textColor="@color/text_secondary"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/tv_daemon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/daemon_never"
+            android:textColor="@color/text_secondary"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/tv_boot"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/boot_never"
+            android:textColor="@color/text_secondary"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/tv_battery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/battery_ok"
+            android:textColor="@color/text_secondary"
+            android:textSize="18sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:text="@string/label_message"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp" />
+
+        <EditText
+            android:id="@+id/et_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_edittext"
+            android:gravity="top|start"
+            android:imeOptions="actionDone"
+            android:inputType="textMultiLine"
+            android:lines="2"
+            android:maxLines="4"
+            android:nextFocusDown="@+id/et_threshold"
+            android:padding="14dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_hint"
+            android:textSize="18sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_threshold"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp" />
+
+                <EditText
+                    android:id="@+id/et_threshold"
+                    android:layout_width="160dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_edittext"
+                    android:inputType="number"
+                    android:nextFocusRight="@+id/et_dismiss"
+                    android:nextFocusDown="@+id/cb_enabled"
+                    android:padding="14dp"
+                    android:singleLine="true"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_dismiss"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp" />
+
+                <EditText
+                    android:id="@+id/et_dismiss"
+                    android:layout_width="160dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_edittext"
+                    android:inputType="number"
+                    android:nextFocusLeft="@+id/et_threshold"
+                    android:nextFocusRight="@+id/et_reset_off"
+                    android:nextFocusDown="@+id/cb_enabled"
+                    android:padding="14dp"
+                    android:singleLine="true"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_reset_off"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp" />
+
+                <EditText
+                    android:id="@+id/et_reset_off"
+                    android:layout_width="160dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_edittext"
+                    android:inputType="number"
+                    android:nextFocusLeft="@+id/et_dismiss"
+                    android:nextFocusDown="@+id/cb_enabled"
+                    android:padding="14dp"
+                    android:singleLine="true"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_preset_30"
+                style="@style/AtvButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:nextFocusRight="@+id/btn_preset_45"
+                android:text="@string/preset_30" />
+
+            <Button
+                android:id="@+id/btn_preset_45"
+                style="@style/AtvButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:nextFocusLeft="@+id/btn_preset_30"
+                android:nextFocusRight="@+id/btn_preset_60"
+                android:text="@string/preset_45" />
+
+            <Button
+                android:id="@+id/btn_preset_60"
+                style="@style/AtvButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:nextFocusLeft="@+id/btn_preset_45"
+                android:text="@string/preset_60" />
+        </LinearLayout>
+
+        <CheckBox
+            android:id="@+id/cb_enabled"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:buttonTint="@color/accent"
+            android:text="@string/label_enabled"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_save"
+                style="@style/AtvButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:nextFocusRight="@+id/btn_test"
+                android:text="@string/action_save" />
+
+            <Button
+                android:id="@+id/btn_test"
+                style="@style/AtvButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:nextFocusLeft="@+id/btn_save"
+                android:nextFocusRight="@+id/btn_reset"
+                android:text="@string/action_test" />
+
+            <Button
+                android:id="@+id/btn_reset"
+                style="@style/AtvButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:nextFocusLeft="@+id/btn_test"
+                android:text="@string/action_reset" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_import"
+                style="@style/AtvButton.Secondary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:nextFocusRight="@+id/btn_export"
+                android:text="@string/action_import" />
+
+            <Button
+                android:id="@+id/btn_export"
+                style="@style/AtvButton.Secondary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:nextFocusLeft="@+id/btn_import"
+                android:text="@string/action_export" />
+
+            <Button
+                android:id="@+id/btn_permission"
+                style="@style/AtvButton.Secondary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:nextFocusLeft="@+id/btn_export"
+                android:nextFocusRight="@+id/btn_battery"
+                android:text="@string/action_grant_permission" />
+
+            <Button
+                android:id="@+id/btn_battery"
+                style="@style/AtvButton.Secondary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:nextFocusLeft="@+id/btn_permission"
+                android:text="@string/action_battery" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/tip_remote"
+            android:textColor="@color/text_hint"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tv_file_path"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/text_hint"
+            android:textSize="16sp" />
+
+    </LinearLayout>
+</ScrollView>

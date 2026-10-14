@@ -1,0 +1,8 @@
+{
+  "message": "你已经连续观看45分钟，建议休息15分钟后再继续看电视哦。",
+  "thresholdMinutes": 45,
+  "dismissSeconds": 10,
+  "resetAfterScreenOffMinutes": 10,
+  "marginDp": 40,
+  "enabled": true
+}

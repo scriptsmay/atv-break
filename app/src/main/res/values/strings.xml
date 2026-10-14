@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">定时休息提醒</string>
+    <string name="notif_channel_desc">连续观看计时（低开销常驻）</string>
+    <string name="notif_content">连续观看 %1$d 分钟后提醒休息</string>
+
+    <!-- 设置界面 -->
+    <string name="label_message">提醒文案</string>
+    <string name="label_threshold">触发阈值（分钟）</string>
+    <string name="label_dismiss">自动关闭（秒）</string>
+    <string name="label_reset_off">息屏多久清零（分钟）</string>
+    <string name="label_enabled">启用定时提醒</string>
+    <string name="action_save">保存并应用</string>
+    <string name="action_test">立即测试浮层</string>
+    <string name="action_reset">重置计时</string>
+    <string name="action_import">从文件导入</string>
+    <string name="action_export">导出到文件</string>
+    <string name="action_grant_permission">去授权悬浮窗</string>
+    <string name="preset_30">30 分钟</string>
+    <string name="preset_45">45 分钟</string>
+    <string name="preset_60">60 分钟</string>
+
+    <string name="status_loading">正在读取状态…</string>
+    <string name="status_format">已连续观看 %1$d 分钟 · 距下次提醒 %2$d 分 %3$d 秒 · 提醒%4$s</string>
+    <string name="status_on">已开启</string>
+    <string name="status_off">已关闭</string>
+
+    <string name="label_daemon">后台守护</string>
+    <string name="daemon_running">后台守护：运行中（%1$s 前有心跳）</string>
+    <string name="daemon_running_just">后台守护：运行中</string>
+    <string name="daemon_stopped">后台守护：已停止，将由看门狗自动拉起</string>
+    <string name="daemon_never">后台守护：尚未启动</string>
+    <string name="boot_never">开机自启：尚未记录（下次开机后这里会显示时间）</string>
+    <string name="boot_ok">开机自启：已生效 · %1$s（开机后 %2$d 分 %3$d 秒被拉起）</string>
+    <string name="battery_ok">电池优化：已忽略（后台不会被限制）</string>
+    <string name="battery_missing">电池优化：未忽略（久待机后提醒可能延迟）</string>
+    <string name="action_battery">加入电池优化白名单</string>
+    <string name="toast_battery_manual">当前设备没有电池优化授权页，可用 adb：dumpsys deviceidle whitelist +%1$s</string>
+
+    <string name="permission_unknown">悬浮窗权限状态未知</string>
+    <string name="permission_granted">悬浮窗权限：已授予</string>
+    <string name="permission_missing">悬浮窗权限：未授予（浮层无法显示）</string>
+
+    <string name="toast_saved">已保存并生效</string>
+    <string name="toast_timer_reset">计时已重置</string>
+    <string name="toast_import_done">已从配置文件导入</string>
+    <string name="toast_import_failed">导入失败：配置文件不存在或格式错误</string>
+    <string name="toast_export_done">已导出到 %1$s</string>
+    <string name="toast_export_failed">导出失败</string>
+    <string name="toast_need_overlay_permission">请先授予悬浮窗权限</string>
+    <string name="toast_manual_permission">请在系统设置中开启「显示在其他应用上层」，或用 adb：appops set %1$s SYSTEM_ALERT_WINDOW allow</string>
+
+    <string name="config_file_path">配置文件：%1$s</string>
+    <string name="tip_remote">遥控器操作：方向键移动焦点，确认键选中；改文案建议用手机/电脑编辑上面的配置文件后点「从文件导入」。</string>
+</resources>

@@ -1,0 +1,16 @@
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+build/
+captures/
+.externalNativeBuild
+.cxx
+*.apk
+*.aab
+.workbuddy/
+
+# Machine-local toolchain paths (JAVA_HOME / ANDROID_HOME / ADB_BIN).
+# Copy scripts/env.example.bat to create it; never commit it.
+scripts/env.bat
