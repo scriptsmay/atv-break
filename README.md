@@ -191,7 +191,7 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 
 ### 用 GitHub Actions 打包（不想配本机环境时）
 
-流水线定义在 `.github/workflows/build-apk.yml`，只做一件事——构建 **release APK**（`assembleRelease`，复用 debug 签名，装到盒子上可直接用）：
+流水线定义在 `.github/workflows/build-apk.yml`，只做一件事——构建 **release APK**（`assembleRelease`，复用 debug 签名，可直接安装使用）：
 
 | 触发方式 | 产出 |
 |---|---|
@@ -199,6 +199,8 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 | 推送 tag `v*`（如 `v1.1.0`） | 额外自动创建 **GitHub Release**（**草稿态**），附上重命名为 `atv-break-<tag>.apk` 的可安装包；在 Releases 页面点 **Publish release** 才对外可见 |
 
 不配 push / PR 自动触发——个人分支随手提交不会消耗构建机。发版由人主动打 tag，且 Release 先落成草稿：产物有问题时不会立刻对外可下载，核对无误再手动 Publish。想改为自动公开，删掉 workflow 里 `gh release create` 的 `--draft` 即可。
+
+**CI 产物与本地产物签名不同，不能互相覆盖安装。**release 复用的是 debug 签名，而 debug keystore 是各机器在 `~/.android/debug.keystore` 自动生成的私有文件：构建机上没有时会现生成一个新的。实测两边 20 个条目里只有 `META-INF/*`（签名）和 git 信息不同，代码与资源逐条 CRC 相同，但签名身份不同，因此把 CI 的包覆盖装到已装本机包的设备上会报 `INSTALL_FAILED_UPDATE_INCOMPATIBLE`，只能先卸载（卸载会清掉配置与计时状态）。要么固定用同一个来源安装，要么把正式 keystore 存进 Actions Secrets 并写进 `signingConfig`。
 
 ## 四、首次运行的必做一步：授予悬浮窗权限
 
