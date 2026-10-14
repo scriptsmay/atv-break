@@ -62,8 +62,10 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           # 故意只建草稿：产物有问题时不会立刻对外可下载，核对无误后手动 Publish
+          # 本作业没有 checkout（不需要源码），故 --repo 必给——gh 否则只能从本地 git remote 猜仓库
           mv apk/app-release.apk "atv-break-${TAG}.apk"
           gh release create "$TAG" "atv-break-${TAG}.apk" \
+            --repo "$GITHUB_REPOSITORY" \
             --title "atv-break ${TAG}" \
             --generate-notes \
             --draft
