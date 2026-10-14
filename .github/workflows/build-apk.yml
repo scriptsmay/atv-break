@@ -56,12 +56,14 @@ jobs:
           name: atv-break-release-apk
           path: apk
 
-      - name: Publish GitHub Release with the APK
+      - name: Create draft GitHub Release with the APK
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
         run: |
+          # 故意只建草稿：产物有问题时不会立刻对外可下载，核对无误后手动 Publish
           mv apk/app-release.apk "atv-break-${TAG}.apk"
           gh release create "$TAG" "atv-break-${TAG}.apk" \
             --title "atv-break ${TAG}" \
-            --generate-notes
+            --generate-notes \
+            --draft

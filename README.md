@@ -196,9 +196,9 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 | 触发方式 | 产出 |
 |---|---|
 | Actions 页面点 **Run workflow**（手动） | 构建产物挂在本次运行的 **Artifacts** 里，需登录 GitHub 下载，默认保留 90 天 |
-| 推送 tag `v*`（如 `v1.1.0`） | 额外自动创建 **GitHub Release**，附上重命名为 `atv-break-<tag>.apk` 的可安装包 |
+| 推送 tag `v*`（如 `v1.1.0`） | 额外自动创建 **GitHub Release**（**草稿态**），附上重命名为 `atv-break-<tag>.apk` 的可安装包；在 Releases 页面点 **Publish release** 才对外可见 |
 
-不配 push / PR 自动触发——个人分支随手提交不会消耗构建机。tag 一旦推送就会对外发布可下载 APK，所以发版由人主动打 tag。
+不配 push / PR 自动触发——个人分支随手提交不会消耗构建机。发版由人主动打 tag，且 Release 先落成草稿：产物有问题时不会立刻对外可下载，核对无误再手动 Publish。想改为自动公开，删掉 workflow 里 `gh release create` 的 `--draft` 即可。
 
 ## 四、首次运行的必做一步：授予悬浮窗权限
 
