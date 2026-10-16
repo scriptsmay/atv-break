@@ -10,8 +10,8 @@ android {
         applicationId "com.atvbreak"
         minSdk 21          // Android 5.0，覆盖主流电视盒子
         targetSdk 34
-        versionCode 1          // 首次公开，沿用装机时的 1，避免盒子上覆盖安装失败
-        versionName "1.1.0"
+        versionCode 2
+        versionName "1.1.1"
     }
 
     buildTypes {
