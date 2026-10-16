@@ -7,6 +7,7 @@
 - 包名：`com.atvbreak`
 - 默认阈值：连续亮屏 **45 分钟** 触发；浮层显示 **10 秒** 后自动关闭
 - 默认文案：`你已经连续观看45分钟，建议休息15分钟后再继续看电视哦。`
+- 提示音：浮层弹出时同时播放一段内置提示音（类似收到短信），默认开启；音量通道可选「通知音量」或「闹钟音量」
 - 依赖：零第三方库，只用 Android 框架 API
 - 兼容：`minSdk 21`（Android 5.0+）→ `targetSdk 34`，leanback 非强制（有 TV 桌面走 LEANBACK_LAUNCHER，没有也能装）
 
@@ -85,8 +86,8 @@ adb logcat -s AtvBreak.Boot AtvBreak.Service
 
 打开应用 → 方向键移动焦点、确认键选中：
 
-- 提醒文案 / 触发阈值（分钟）/ 自动关闭（秒）/ 息屏多久清零（分钟）/ 启用开关
-- 快捷按钮：`30 分钟` `45 分钟` `60 分钟` 一键设阈值
+- 提醒文案 / 触发阈值（分钟）/ 自动关闭（秒）/ 息屏多久清零（分钟）/ 启用开关 / 提示音开关与音量通道
+- 快捷按钮：`30 分钟` `45 分钟` `60 分钟` 一键设阈值；`15 秒` `30 秒` `1 分钟` 一键设浮层自动关闭时长
 - `保存并应用`、`立即测试浮层`、`重置计时`、`从文件导入`、`导出到文件`
 
 界面上改文案需要输入法，TV 上比较麻烦 → 长文案走下面的配置文件。
@@ -108,7 +109,9 @@ adb logcat -s AtvBreak.Boot AtvBreak.Service
   "dismissSeconds": 10,
   "resetAfterScreenOffMinutes": 10,
   "marginDp": 40,
-  "enabled": true
+  "enabled": true,
+  "soundEnabled": true,
+  "soundStream": "notification"
 }
 ```
 
@@ -122,6 +125,8 @@ adb logcat -s AtvBreak.Boot AtvBreak.Service
 | `resetAfterScreenOffMinutes` | 10 | 息屏超过这个时长则计时清零；设 0 表示永不清零 |
 | `marginDp` | 40 | 浮层距屏幕右/下边缘的间距 |
 | `enabled` | true | 总开关 |
+| `soundEnabled` | true | 浮层弹出时是否播放提示音 |
+| `soundStream` | `notification` | 提示音音量通道：`notification`（通知音量，像短信）或 `alarm`（闹钟音量，更不容易漏听） |
 
 生效方式三选一：① 点界面上的「从文件导入」；② 发广播 `adb shell am broadcast -a com.atvbreak.action.RELOAD_CONFIG -n com.atvbreak/.ActionReceiver`；③ 重启应用 / 重启盒子（文件比上次应用的时间新就会被自动加载）。
 
@@ -268,7 +273,8 @@ app/src/main/java/com/atvbreak/
 ├── MainActivity.java     TV 设置界面（遥控器可操作）
 ├── WatchTimerService.java 计时前台服务（事件驱动 + AlarmManager + 15 分钟看门狗自愈）
 ├── ActionReceiver.java   指令入口（系统到点提醒 / adb 调试广播）
-├── ReminderOverlay.java  右下角浮层（自动关闭）
+├── ReminderOverlay.java  右下角浮层（自动关闭，弹出时按配置播放提示音）
+├── ReminderSound.java    提示音播放（内置 res/raw/reminder_chime.ogg，可选通知/闹钟音量通道）
 └── BootReceiver.java     开机 / 解锁 / 快速开机 / 升级后拉起服务（并记录自启时间）
 ```
 

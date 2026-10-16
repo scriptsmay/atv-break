@@ -45,6 +45,11 @@ public final class AppConfig {
     public static final int DEFAULT_RESET_AFTER_SCREEN_OFF_MINUTES = 10;
     public static final int DEFAULT_MARGIN_DP = 40;
     public static final boolean DEFAULT_ENABLED = true;
+    public static final boolean DEFAULT_SOUND_ENABLED = true;
+    /** 提示音音量通道：notification（通知音量，默认）/ alarm（闹钟音量）。 */
+    public static final String SOUND_STREAM_NOTIFICATION = "notification";
+    public static final String SOUND_STREAM_ALARM = "alarm";
+    public static final String DEFAULT_SOUND_STREAM = SOUND_STREAM_NOTIFICATION;
 
     static final String PREFS = "atv_break";
     static final String K_MESSAGE = "message";
@@ -53,6 +58,8 @@ public final class AppConfig {
     static final String K_RESET_AFTER_OFF_MINUTES = "reset_after_screen_off_minutes";
     static final String K_MARGIN_DP = "margin_dp";
     static final String K_ENABLED = "enabled";
+    static final String K_SOUND_ENABLED = "sound_enabled";
+    static final String K_SOUND_STREAM = "sound_stream";
     static final String K_FILE_MTIME_EXT = "config_file_mtime_ext";
     static final String K_FILE_MTIME_INT = "config_file_mtime_int";
 
@@ -62,6 +69,8 @@ public final class AppConfig {
     int resetAfterScreenOffMinutes = DEFAULT_RESET_AFTER_SCREEN_OFF_MINUTES;
     int marginDp = DEFAULT_MARGIN_DP;
     boolean enabled = DEFAULT_ENABLED;
+    boolean soundEnabled = DEFAULT_SOUND_ENABLED;
+    String soundStream = DEFAULT_SOUND_STREAM;
 
     public String message() {
         return message;
@@ -85,6 +94,19 @@ public final class AppConfig {
 
     public boolean enabled() {
         return enabled;
+    }
+
+    public boolean soundEnabled() {
+        return soundEnabled;
+    }
+
+    public String soundStream() {
+        return soundStream;
+    }
+
+    /** 提示音是否走闹钟音量通道。 */
+    public boolean useAlarmStream() {
+        return SOUND_STREAM_ALARM.equals(soundStream);
     }
 
     public long thresholdMillis() {
@@ -113,6 +135,8 @@ public final class AppConfig {
                 .putInt(K_RESET_AFTER_OFF_MINUTES, resetAfterScreenOffMinutes)
                 .putInt(K_MARGIN_DP, marginDp)
                 .putBoolean(K_ENABLED, enabled)
+                .putBoolean(K_SOUND_ENABLED, soundEnabled)
+                .putString(K_SOUND_STREAM, soundStream)
                 .apply();
     }
 
@@ -134,7 +158,14 @@ public final class AppConfig {
         cfg.resetAfterScreenOffMinutes = p.getInt(K_RESET_AFTER_OFF_MINUTES, DEFAULT_RESET_AFTER_SCREEN_OFF_MINUTES);
         cfg.marginDp = p.getInt(K_MARGIN_DP, DEFAULT_MARGIN_DP);
         cfg.enabled = p.getBoolean(K_ENABLED, DEFAULT_ENABLED);
+        cfg.soundEnabled = p.getBoolean(K_SOUND_ENABLED, DEFAULT_SOUND_ENABLED);
+        cfg.soundStream = normalizeStream(p.getString(K_SOUND_STREAM, DEFAULT_SOUND_STREAM));
         return cfg;
+    }
+
+    /** 音量通道白名单：非 alarm 一律回落到 notification。 */
+    static String normalizeStream(String s) {
+        return SOUND_STREAM_ALARM.equals(s) ? SOUND_STREAM_ALARM : SOUND_STREAM_NOTIFICATION;
     }
 
     private static int positiveInt(SharedPreferences p, String key, int def) {
@@ -258,6 +289,8 @@ public final class AppConfig {
         o.put("resetAfterScreenOffMinutes", cfg.resetAfterScreenOffMinutes);
         o.put("marginDp", cfg.marginDp);
         o.put("enabled", cfg.enabled);
+        o.put("soundEnabled", cfg.soundEnabled);
+        o.put("soundStream", cfg.soundStream);
         return o;
     }
 
@@ -285,6 +318,12 @@ public final class AppConfig {
             }
             if (o.has("enabled")) {
                 cfg.enabled = o.getBoolean("enabled");
+            }
+            if (o.has("soundEnabled")) {
+                cfg.soundEnabled = o.getBoolean("soundEnabled");
+            }
+            if (o.has("soundStream")) {
+                cfg.soundStream = normalizeStream(o.optString("soundStream", DEFAULT_SOUND_STREAM));
             }
             if (cfg.thresholdMinutes <= 0) {
                 cfg.thresholdMinutes = DEFAULT_THRESHOLD_MINUTES;

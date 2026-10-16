@@ -4,5 +4,7 @@
   "dismissSeconds": 10,
   "resetAfterScreenOffMinutes": 10,
   "marginDp": 40,
-  "enabled": true
+  "enabled": true,
+  "soundEnabled": true,
+  "soundStream": "notification"
 }

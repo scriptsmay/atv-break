@@ -51,6 +51,8 @@ public class MainActivity extends Activity {
     private EditText etDismiss;
     private EditText etResetOff;
     private CheckBox cbEnabled;
+    private CheckBox cbSound;
+    private CheckBox cbSoundAlarm;
     private TextView tvStatus;
     private TextView tvPermission;
     private TextView tvDaemon;
@@ -77,6 +79,8 @@ public class MainActivity extends Activity {
         etDismiss = findViewById(R.id.et_dismiss);
         etResetOff = findViewById(R.id.et_reset_off);
         cbEnabled = findViewById(R.id.cb_enabled);
+        cbSound = findViewById(R.id.cb_sound);
+        cbSoundAlarm = findViewById(R.id.cb_sound_alarm);
         tvStatus = findViewById(R.id.tv_status);
         tvPermission = findViewById(R.id.tv_permission);
         tvDaemon = findViewById(R.id.tv_daemon);
@@ -90,6 +94,8 @@ public class MainActivity extends Activity {
         etDismiss.setText(String.valueOf(cfg.dismissSeconds()));
         etResetOff.setText(String.valueOf(cfg.resetAfterScreenOffMinutes()));
         cbEnabled.setChecked(cfg.enabled());
+        cbSound.setChecked(cfg.soundEnabled());
+        cbSoundAlarm.setChecked(cfg.useAlarmStream());
         tvFilePath.setText(getString(R.string.config_file_path, AppConfig.configFile(this).getAbsolutePath()));
 
         Button btnSave = findViewById(R.id.btn_save);
@@ -102,7 +108,7 @@ public class MainActivity extends Activity {
                 toast(getString(R.string.toast_need_overlay_permission));
                 return;
             }
-            ReminderOverlay.show(this, c.message(), c.dismissMillis(), c.marginDp());
+            ReminderOverlay.show(this, c);
         });
         btnTest.setOnFocusChangeListener(focusHighlightListener);
 
@@ -142,10 +148,15 @@ public class MainActivity extends Activity {
         bindPreset(R.id.btn_preset_30, 30);
         bindPreset(R.id.btn_preset_45, 45);
         bindPreset(R.id.btn_preset_60, 60);
+        bindDismissPreset(R.id.btn_dismiss_15, 15);
+        bindDismissPreset(R.id.btn_dismiss_30, 30);
+        bindDismissPreset(R.id.btn_dismiss_60, 60);
 
         for (View b : new View[]{btnSave, btnReset, btnImport, btnExport, btnPermission, btnBattery,
                 findViewById(R.id.btn_preset_30), findViewById(R.id.btn_preset_45),
-                findViewById(R.id.btn_preset_60)}) {
+                findViewById(R.id.btn_preset_60), findViewById(R.id.btn_dismiss_15),
+                findViewById(R.id.btn_dismiss_30), findViewById(R.id.btn_dismiss_60),
+                cbSound, cbSoundAlarm}) {
             b.setOnFocusChangeListener(focusHighlightListener);
         }
 
@@ -166,6 +177,9 @@ public class MainActivity extends Activity {
         cfg.dismissSeconds = intOf(etDismiss, AppConfig.DEFAULT_DISMISS_SECONDS);
         cfg.resetAfterScreenOffMinutes = intOf(etResetOff, AppConfig.DEFAULT_RESET_AFTER_SCREEN_OFF_MINUTES);
         cfg.enabled = cbEnabled.isChecked();
+        cfg.soundEnabled = cbSound.isChecked();
+        cfg.soundStream = cbSoundAlarm.isChecked()
+                ? AppConfig.SOUND_STREAM_ALARM : AppConfig.SOUND_STREAM_NOTIFICATION;
         cfg.save(this);
         AppConfig.exportToFile(this, cfg);
         WatchTimerService.send(this, WatchTimerService.ACTION_RELOAD);
@@ -177,6 +191,15 @@ public class MainActivity extends Activity {
         Button b = findViewById(id);
         b.setOnClickListener(v -> {
             etThreshold.setText(String.valueOf(minutes));
+            onSave(v);
+        });
+    }
+
+    /** 浮层自动关闭秒数的快捷选值（15 秒 / 30 秒 / 1 分钟）。 */
+    private void bindDismissPreset(int id, int seconds) {
+        Button b = findViewById(id);
+        b.setOnClickListener(v -> {
+            etDismiss.setText(String.valueOf(seconds));
             onSave(v);
         });
     }
@@ -196,6 +219,8 @@ public class MainActivity extends Activity {
         etDismiss.setText(String.valueOf(cfg.dismissSeconds()));
         etResetOff.setText(String.valueOf(cfg.resetAfterScreenOffMinutes()));
         cbEnabled.setChecked(cfg.enabled());
+        cbSound.setChecked(cfg.soundEnabled());
+        cbSoundAlarm.setChecked(cfg.useAlarmStream());
     }
 
     private void refreshStatus() {

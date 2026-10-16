@@ -215,7 +215,44 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
                 android:nextFocusLeft="@+id/btn_preset_45"
+                android:nextFocusDown="@+id/btn_dismiss_15"
                 android:text="@string/preset_60" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_dismiss_15"
+                style="@style/AtvButton.Secondary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:nextFocusUp="@+id/btn_preset_60"
+                android:nextFocusRight="@+id/btn_dismiss_30"
+                android:text="@string/preset_dismiss_15" />
+
+            <Button
+                android:id="@+id/btn_dismiss_30"
+                style="@style/AtvButton.Secondary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:nextFocusLeft="@+id/btn_dismiss_15"
+                android:nextFocusRight="@+id/btn_dismiss_60"
+                android:text="@string/preset_dismiss_30" />
+
+            <Button
+                android:id="@+id/btn_dismiss_60"
+                style="@style/AtvButton.Secondary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:nextFocusLeft="@+id/btn_dismiss_30"
+                android:nextFocusDown="@+id/cb_enabled"
+                android:text="@string/preset_dismiss_60" />
         </LinearLayout>
 
         <CheckBox
@@ -224,7 +261,32 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:buttonTint="@color/accent"
+            android:nextFocusDown="@+id/cb_sound"
             android:text="@string/label_enabled"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp" />
+
+        <CheckBox
+            android:id="@+id/cb_sound"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:buttonTint="@color/accent"
+            android:nextFocusUp="@+id/cb_enabled"
+            android:nextFocusDown="@+id/cb_sound_alarm"
+            android:text="@string/label_sound"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp" />
+
+        <CheckBox
+            android:id="@+id/cb_sound_alarm"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:buttonTint="@color/accent"
+            android:nextFocusUp="@+id/cb_sound"
+            android:nextFocusDown="@+id/btn_save"
+            android:text="@string/label_sound_alarm"
             android:textColor="@color/text_primary"
             android:textSize="20sp" />
 

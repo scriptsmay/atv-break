@@ -37,7 +37,8 @@ import android.widget.TextView;
  *
  * - 使用 SYSTEM_ALERT_WINDOW 悬浮窗，浮在所有应用之上；
  * - FLAG_NOT_FOCUSABLE / FLAG_NOT_TOUCHABLE：不抢焦点、不吃按键，遥控器操作不受影响；
- * - 显示固定时长后由 Handler 自动移除，无需任何交互。
+ * - 显示固定时长后由 Handler 自动移除，无需任何交互；
+ * - 弹出时可同时播放提示音（{@link ReminderSound}），由配置决定开关与音量通道。
  */
 public final class ReminderOverlay {
 
@@ -58,7 +59,7 @@ public final class ReminderOverlay {
         return Settings.canDrawOverlays(c);
     }
 
-    public static synchronized void show(Context c, String message, long dismissMs, int marginDp) {
+    public static synchronized void show(Context c, AppConfig cfg) {
         Context ctx = c.getApplicationContext();
         handler.removeCallbacks(dismissTask);
 
@@ -76,9 +77,9 @@ public final class ReminderOverlay {
         }
 
         TextView tv = overlayView.findViewById(R.id.overlay_text);
-        tv.setText(message);
+        tv.setText(cfg.message());
 
-        WindowManager.LayoutParams lp = buildLayoutParams(ctx, marginDp);
+        WindowManager.LayoutParams lp = buildLayoutParams(ctx, cfg.marginDp());
         try {
             windowManager.addView(overlayView, lp);
         } catch (Exception e) {
@@ -86,10 +87,16 @@ public final class ReminderOverlay {
             return;
         }
 
+        // 弹浮层的同时播放提示音，避免用户没看屏幕而错过提醒
+        if (cfg.soundEnabled()) {
+            ReminderSound.play(ctx, cfg.useAlarmStream());
+        }
+
         AlphaAnimation fade = new AlphaAnimation(0f, 1f);
         fade.setDuration(220);
         overlayView.startAnimation(fade);
 
+        long dismissMs = cfg.dismissMillis();
         long delay = dismissMs > 0 ? dismissMs : 10_000L;
         handler.postDelayed(dismissTask, delay);
     }

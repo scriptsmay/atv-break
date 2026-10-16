@@ -57,7 +57,7 @@ public class ActionReceiver extends BroadcastReceiver {
                 break;
             case WatchTimerService.ACTION_TEST:
                 AppConfig cfg = AppConfig.load(context);
-                ReminderOverlay.show(context, cfg.message(), cfg.dismissMillis(), cfg.marginDp());
+                ReminderOverlay.show(context, cfg);
                 WatchTimerService.scheduleTick(context);
                 break;
             case WatchTimerService.ACTION_RESET:

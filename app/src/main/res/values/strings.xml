@@ -10,6 +10,8 @@
     <string name="label_dismiss">自动关闭（秒）</string>
     <string name="label_reset_off">息屏多久清零（分钟）</string>
     <string name="label_enabled">启用定时提醒</string>
+    <string name="label_sound">提醒时播放提示音</string>
+    <string name="label_sound_alarm">提示音走闹钟音量（更不容易漏听）</string>
     <string name="action_save">保存并应用</string>
     <string name="action_test">立即测试浮层</string>
     <string name="action_reset">重置计时</string>
@@ -19,6 +21,9 @@
     <string name="preset_30">30 分钟</string>
     <string name="preset_45">45 分钟</string>
     <string name="preset_60">60 分钟</string>
+    <string name="preset_dismiss_15">15 秒</string>
+    <string name="preset_dismiss_30">30 秒</string>
+    <string name="preset_dismiss_60">1 分钟</string>
 
     <string name="status_loading">正在读取状态…</string>
     <string name="status_format">已连续观看 %1$d 分钟 · 距下次提醒 %2$d 分 %3$d 秒 · 提醒%4$s</string>

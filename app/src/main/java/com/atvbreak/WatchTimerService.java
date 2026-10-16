@@ -121,7 +121,7 @@ public class WatchTimerService extends Service {
 
         String action = intent == null ? null : intent.getAction();
         if (ACTION_TEST.equals(action)) {
-            ReminderOverlay.show(this, cfg.message(), cfg.dismissMillis(), cfg.marginDp());
+            ReminderOverlay.show(this, cfg);
         } else if (ACTION_RESET.equals(action)) {
             resetTimer();
         } else if (ACTION_REMIND.equals(action)) {
@@ -493,7 +493,7 @@ public class WatchTimerService extends Service {
     /** 展示浮层并开启下一轮计时。 */
     static void fireReminder(Context c) {
         AppConfig cfg = AppConfig.load(c);
-        ReminderOverlay.show(c, cfg.message(), cfg.dismissMillis(), cfg.marginDp());
+        ReminderOverlay.show(c, cfg);
         Log.i(TAG, "触发提醒：" + cfg.message());
         // 提醒后开启新一轮计时；真正休息（息屏）超过阈值同样会清零
         resetPersisted(c);
