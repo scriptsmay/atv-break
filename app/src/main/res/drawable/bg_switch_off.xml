@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="28dp"
+    android:viewportWidth="52"
+    android:viewportHeight="28">
+    <!-- 轨道（关：表面色 + 描边） -->
+    <path
+        android:fillColor="#FF20232E"
+        android:pathData="M14,0 H38 A14,14 0 0 1 38,28 H14 A14,14 0 0 1 14,0 Z"
+        android:strokeColor="#FF2A2D3A"
+        android:strokeWidth="1.5" />
+    <!-- 滑块 -->
+    <path
+        android:fillColor="#FF6E7280"
+        android:pathData="M14,6 a8,8 0 1 0 0,16 a8,8 0 1 0 0,-16 z" />
+</vector>

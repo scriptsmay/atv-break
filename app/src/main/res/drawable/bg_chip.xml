@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 遥控器焦点态 -->
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/accent_fill_strong" />
+            <stroke
+                android:width="2dp"
+                android:color="@color/accent" />
+            <corners android:radius="999dp" />
+        </shape>
+    </item>
+    <!-- 已选中的预设值 -->
+    <item android:state_activated="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/accent_fill" />
+            <stroke
+                android:width="1.5dp"
+                android:color="@color/accent" />
+            <corners android:radius="999dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/surface_2" />
+            <stroke
+                android:width="1.5dp"
+                android:color="@color/line" />
+            <corners android:radius="999dp" />
+        </shape>
+    </item>
+</selector>

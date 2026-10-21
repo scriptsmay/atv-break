@@ -20,6 +20,7 @@ package com.atvbreak;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -54,6 +55,13 @@ public class MainActivity extends Activity {
     private CheckBox cbSound;
     private CheckBox cbSoundAlarm;
     private TextView tvStatus;
+    private TextView tvNext;
+    private TimerRingView ringTimer;
+    private View dotStatus;
+    private View dotPermission;
+    private View dotDaemon;
+    private View dotBoot;
+    private View dotBattery;
     private TextView tvPermission;
     private TextView tvDaemon;
     private TextView tvBoot;
@@ -82,6 +90,13 @@ public class MainActivity extends Activity {
         cbSound = findViewById(R.id.cb_sound);
         cbSoundAlarm = findViewById(R.id.cb_sound_alarm);
         tvStatus = findViewById(R.id.tv_status);
+        tvNext = findViewById(R.id.tv_next);
+        ringTimer = findViewById(R.id.ring_timer);
+        dotStatus = findViewById(R.id.dot_status);
+        dotPermission = findViewById(R.id.dot_permission);
+        dotDaemon = findViewById(R.id.dot_daemon);
+        dotBoot = findViewById(R.id.dot_boot);
+        dotBattery = findViewById(R.id.dot_battery);
         tvPermission = findViewById(R.id.tv_permission);
         tvDaemon = findViewById(R.id.tv_daemon);
         tvBoot = findViewById(R.id.tv_boot);
@@ -152,11 +167,18 @@ public class MainActivity extends Activity {
         bindDismissPreset(R.id.btn_dismiss_30, 30);
         bindDismissPreset(R.id.btn_dismiss_60, 60);
 
+        // 「设为永不清零」：息屏清零时长填 0
+        findViewById(R.id.chip_reset_never).setOnClickListener(v -> {
+            etResetOff.setText("0");
+            onSave(v);
+        });
+
         for (View b : new View[]{btnSave, btnReset, btnImport, btnExport, btnPermission, btnBattery,
                 findViewById(R.id.btn_preset_30), findViewById(R.id.btn_preset_45),
                 findViewById(R.id.btn_preset_60), findViewById(R.id.btn_dismiss_15),
                 findViewById(R.id.btn_dismiss_30), findViewById(R.id.btn_dismiss_60),
-                cbSound, cbSoundAlarm}) {
+                findViewById(R.id.chip_reset_never),
+                cbEnabled, cbSound, cbSoundAlarm}) {
             b.setOnFocusChangeListener(focusHighlightListener);
         }
 
@@ -175,7 +197,8 @@ public class MainActivity extends Activity {
                 ? AppConfig.DEFAULT_MESSAGE : etMessage.getText().toString().trim();
         cfg.thresholdMinutes = intOf(etThreshold, AppConfig.DEFAULT_THRESHOLD_MINUTES);
         cfg.dismissSeconds = intOf(etDismiss, AppConfig.DEFAULT_DISMISS_SECONDS);
-        cfg.resetAfterScreenOffMinutes = intOf(etResetOff, AppConfig.DEFAULT_RESET_AFTER_SCREEN_OFF_MINUTES);
+        cfg.resetAfterScreenOffMinutes = intOfAllowZero(etResetOff,
+                AppConfig.DEFAULT_RESET_AFTER_SCREEN_OFF_MINUTES);
         cfg.enabled = cbEnabled.isChecked();
         cfg.soundEnabled = cbSound.isChecked();
         cfg.soundStream = cbSoundAlarm.isChecked()
@@ -213,6 +236,44 @@ public class MainActivity extends Activity {
         }
     }
 
+    /** 与 {@link #intOf} 相同，但允许 0（息屏清零时长填 0 表示永不清零）。 */
+    private static int intOfAllowZero(EditText et, int def) {
+        try {
+            int v = Integer.parseInt(et.getText().toString().trim());
+            return v >= 0 ? v : def;
+        } catch (NumberFormatException e) {
+            return def;
+        }
+    }
+
+    /** 让当前生效的数值对应的预设胶囊高亮。 */
+    private void updateChips() {
+        int threshold = intOf(etThreshold, 0);
+        setActivated(R.id.btn_preset_30, threshold == 30);
+        setActivated(R.id.btn_preset_45, threshold == 45);
+        setActivated(R.id.btn_preset_60, threshold == 60);
+
+        int dismiss = intOf(etDismiss, 0);
+        setActivated(R.id.btn_dismiss_15, dismiss == 15);
+        setActivated(R.id.btn_dismiss_30, dismiss == 30);
+        setActivated(R.id.btn_dismiss_60, dismiss == 60);
+
+        setActivated(R.id.chip_reset_never, intOfAllowZero(etResetOff, -1) == 0);
+    }
+
+    private void setActivated(int id, boolean on) {
+        View v = findViewById(id);
+        if (v != null) {
+            v.setActivated(on);
+        }
+    }
+
+    private void tintDot(View dot, int color) {
+        if (dot != null) {
+            dot.setBackgroundTintList(ColorStateList.valueOf(color));
+        }
+    }
+
     private void fill(AppConfig cfg) {
         etMessage.setText(cfg.message());
         etThreshold.setText(String.valueOf(cfg.thresholdMinutes()));
@@ -227,48 +288,65 @@ public class MainActivity extends Activity {
         AppConfig cfg = AppConfig.load(this);
         long watched = WatchTimerService.currentWatchingMs(this);
         long remain = Math.max(0, cfg.thresholdMillis() - watched);
-        tvStatus.setText(getString(R.string.status_format,
-                watched / 60000, remain / 60000, (remain / 1000) % 60,
+        int warn = getResources().getColor(R.color.warn);
+        int ok = getResources().getColor(R.color.ok);
+        int neutral = getResources().getColor(R.color.text_secondary);
+
+        // 顶栏状态胶囊 + 环形进度
+        tvStatus.setText(getString(R.string.pill_status_format,
                 cfg.enabled() ? getString(R.string.status_on) : getString(R.string.status_off)));
+        tintDot(dotStatus, cfg.enabled() ? ok : warn);
+        ringTimer.setProgress(watched, cfg.thresholdMillis());
+        tvNext.setText(cfg.enabled()
+                ? getString(R.string.next_remind_format, remain / 60000, (remain / 1000) % 60)
+                : getString(R.string.next_remind_off));
+        updateChips();
 
         boolean granted = ReminderOverlay.canDrawOverlays(this);
         tvPermission.setText(granted ? getString(R.string.permission_granted)
                 : getString(R.string.permission_missing));
-        tvPermission.setTextColor(getResources().getColor(
-                granted ? R.color.ok : R.color.warn));
+        tvPermission.setTextColor(granted ? ok : warn);
+        tintDot(dotPermission, granted ? ok : warn);
         findViewById(R.id.btn_permission).setVisibility(granted ? View.GONE : View.VISIBLE);
 
         // 后台守护状态：心跳超过 2 个看门狗周期认为已停止（看门狗会自动拉起）
         long age = WatchTimerService.heartbeatAgeMs(this);
-        int warn = getResources().getColor(R.color.warn);
-        int ok = getResources().getColor(R.color.ok);
+        boolean daemonOk;
         if (age < 0) {
             tvDaemon.setText(getString(R.string.daemon_never));
             tvDaemon.setTextColor(warn);
+            daemonOk = false;
         } else if (age > WatchTimerService.TICK_INTERVAL_MS * 2L) {
             tvDaemon.setText(getString(R.string.daemon_stopped));
             tvDaemon.setTextColor(warn);
+            daemonOk = false;
         } else if (age < 60_000L) {
             tvDaemon.setText(getString(R.string.daemon_running_just));
             tvDaemon.setTextColor(ok);
+            daemonOk = true;
         } else {
             tvDaemon.setText(getString(R.string.daemon_running, (age / 60000L) + " 分钟"));
             tvDaemon.setTextColor(ok);
+            daemonOk = true;
         }
+        tintDot(dotDaemon, daemonOk ? ok : warn);
 
         String bootWall = WatchTimerService.bootWallClock(this);
         long bootAt = WatchTimerService.bootAtElapsedMs(this);
         if (bootWall == null || bootAt < 0) {
             tvBoot.setText(getString(R.string.boot_never));
-            tvBoot.setTextColor(getResources().getColor(R.color.text_secondary));
+            tvBoot.setTextColor(neutral);
+            tintDot(dotBoot, neutral);
         } else {
             tvBoot.setText(getString(R.string.boot_ok, bootWall, bootAt / 60000L, (bootAt / 1000L) % 60L));
             tvBoot.setTextColor(ok);
+            tintDot(dotBoot, ok);
         }
 
         boolean ignoring = isIgnoringBatteryOptimization();
         tvBattery.setText(ignoring ? getString(R.string.battery_ok) : getString(R.string.battery_missing));
         tvBattery.setTextColor(ignoring ? ok : warn);
+        tintDot(dotBattery, ignoring ? ok : warn);
         findViewById(R.id.btn_battery).setVisibility(ignoring ? View.GONE : View.VISIBLE);
     }
 

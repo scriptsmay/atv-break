@@ -270,7 +270,8 @@ adb logcat -s AtvBreak.Service AtvBreak.Action | grep -E "has died|Scheduling re
 ```
 app/src/main/java/com/atvbreak/
 ├── AppConfig.java        配置：默认值 + SharedPreferences + JSON 文件导入导出（内/外两处）
-├── MainActivity.java     TV 设置界面（遥控器可操作）
+├── MainActivity.java     TV 设置界面（遥控器可操作：左状态 / 右设置 双栏卡片）
+├── TimerRingView.java    状态卡环形进度（自绘 View，连续观看时长 / 阈值）
 ├── WatchTimerService.java 计时前台服务（事件驱动 + AlarmManager + 15 分钟看门狗自愈）
 ├── ActionReceiver.java   指令入口（系统到点提醒 / adb 调试广播）
 ├── ReminderOverlay.java  右下角浮层（自动关闭，弹出时按配置播放提示音）

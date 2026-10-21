@@ -3,12 +3,12 @@
     android:shape="rectangle">
     <solid android:color="@color/overlay_bg" />
     <stroke
-        android:width="2dp"
-        android:color="#664DA3FF" />
-    <corners android:radius="14dp" />
+        android:width="1.5dp"
+        android:color="#594DA3FF" />
+    <corners android:radius="20dp" />
     <padding
-        android:bottom="2dp"
-        android:left="2dp"
-        android:right="2dp"
-        android:top="2dp" />
+        android:bottom="22dp"
+        android:left="24dp"
+        android:right="24dp"
+        android:top="22dp" />
 </shape>

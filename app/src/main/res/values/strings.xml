@@ -24,27 +24,42 @@
     <string name="preset_dismiss_15">15 秒</string>
     <string name="preset_dismiss_30">30 秒</string>
     <string name="preset_dismiss_60">1 分钟</string>
+    <string name="preset_reset_never">设为永不清零</string>
+
+    <string name="app_subtitle">守护全家人的用眼健康</string>
+    <string name="label_never">永不清零</string>
+    <string name="overlay_title">该休息一下啦</string>
+    <string name="overlay_countdown">%1$ds</string>
 
     <string name="status_loading">正在读取状态…</string>
-    <string name="status_format">已连续观看 %1$d 分钟 · 距下次提醒 %2$d 分 %3$d 秒 · 提醒%4$s</string>
     <string name="status_on">已开启</string>
     <string name="status_off">已关闭</string>
+    <string name="pill_status_format">计时中 · 提醒%1$s</string>
+    <string name="next_remind_format">距下次提醒还有 %1$d 分 %2$d 秒</string>
+    <string name="next_remind_off">提醒已关闭，暂不计时</string>
 
     <string name="label_daemon">后台守护</string>
-    <string name="daemon_running">后台守护：运行中（%1$s 前有心跳）</string>
-    <string name="daemon_running_just">后台守护：运行中</string>
-    <string name="daemon_stopped">后台守护：已停止，将由看门狗自动拉起</string>
-    <string name="daemon_never">后台守护：尚未启动</string>
-    <string name="boot_never">开机自启：尚未记录（下次开机后这里会显示时间）</string>
-    <string name="boot_ok">开机自启：已生效 · %1$s（开机后 %2$d 分 %3$d 秒被拉起）</string>
-    <string name="battery_ok">电池优化：已忽略（后台不会被限制）</string>
-    <string name="battery_missing">电池优化：未忽略（久待机后提醒可能延迟）</string>
+    <string name="label_permission">悬浮窗权限</string>
+    <string name="label_boot">开机自启</string>
+    <string name="label_battery">电池优化</string>
+
+    <string name="section_switches">开关</string>
+    <string name="section_settings">提醒设置</string>
+    <string name="section_actions">操作</string>
+    <string name="daemon_running">运行中（%1$s 前有心跳）</string>
+    <string name="daemon_running_just">运行中</string>
+    <string name="daemon_stopped">已停止，看门狗会自动拉起</string>
+    <string name="daemon_never">尚未启动</string>
+    <string name="boot_never">尚未记录（下次开机后显示）</string>
+    <string name="boot_ok">%1$s（开机后 %2$d 分 %3$d 秒被拉起）</string>
+    <string name="battery_ok">已忽略</string>
+    <string name="battery_missing">未忽略，久待机可能延迟</string>
     <string name="action_battery">加入电池优化白名单</string>
     <string name="toast_battery_manual">当前设备没有电池优化授权页，可用 adb：dumpsys deviceidle whitelist +%1$s</string>
 
-    <string name="permission_unknown">悬浮窗权限状态未知</string>
-    <string name="permission_granted">悬浮窗权限：已授予</string>
-    <string name="permission_missing">悬浮窗权限：未授予（浮层无法显示）</string>
+    <string name="permission_unknown">未知</string>
+    <string name="permission_granted">已授予</string>
+    <string name="permission_missing">未授予，浮层无法显示</string>
 
     <string name="toast_saved">已保存并生效</string>
     <string name="toast_timer_reset">计时已重置</string>

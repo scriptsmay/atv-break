@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>atv-break · TV UI 优化设计稿</title>
+<style>
+  :root {
+    /* ===== 设计契约 token ===== */
+    --tv-bg: #101014;            /* 画布 */
+    --surface: #191B23;          /* 卡片表面 */
+    --surface-2: #20232E;        /* 控件表面 / 输入框 */
+    --line: #2A2D3A;             /* 描边 */
+    --text: #F2F3F7;             /* 主文字 */
+    --text-2: #A9ADBD;           /* 次级文字 */
+    --hint: #6E7280;             /* 提示文字 */
+    --accent: #4DA3FF;           /* 主色（沿用现有品牌蓝） */
+    --accent-soft: rgba(77,163,255,.16);
+    --ok: #57C98A;
+    --warn: #FFB05C;
+    --radius-card: 16px;         /* 圆角体系 1/2：卡片 */
+    --radius-ctl: 12px;          /* 圆角体系 2/2：控件 */
+    --sp: 8px;                   /* 间距基数 8 */
+    --font: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#ECEEF2; font-family:var(--font);
+    padding:40px 32px 64px; color:#1B1D26;
+  }
+  .page-head { max-width:1280px; margin:0 auto 8px; }
+  .page-head h1 { font-size:28px; font-weight:700; }
+  .page-head p { color:#5A5E6E; font-size:14px; margin-top:6px; line-height:1.7; }
+  .screen-wrap { max-width:1280px; margin:36px auto 0; }
+  .screen-label { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .screen-label .no { width:24px; height:24px; border-radius:8px; background:#1B1D26; color:#fff; font-size:13px; font-weight:600; display:flex; align-items:center; justify-content:center; }
+  .screen-label .t { font-size:16px; font-weight:600; }
+  .screen-label .d { font-size:13px; color:#5A5E6E; }
+
+  /* ===== TV 画布 16:9 ===== */
+  .tv {
+    aspect-ratio:16/9; background:var(--tv-bg); border-radius:12px;
+    box-shadow:0 20px 60px rgba(20,22,35,.28), 0 0 0 1px rgba(0,0,0,.06);
+    position:relative; overflow:hidden;
+    padding:clamp(16px,3.2%,44px) clamp(20px,3.6%,48px);
+    display:flex; flex-direction:column; color:var(--text);
+  }
+
+  /* ---- 顶栏 ---- */
+  .topbar { display:flex; align-items:center; gap:16px; flex:none; }
+  .logo { width:40px; height:40px; border-radius:12px; background:var(--accent-soft); display:flex; align-items:center; justify-content:center; flex:none; }
+  .logo svg { width:22px; height:22px; }
+  .app-title { font-size:clamp(15px,1.8vw,22px); font-weight:700; letter-spacing:.02em; }
+  .app-sub { font-size:clamp(10px,1.05vw,13px); color:var(--text-2); margin-top:2px; }
+  .top-status { margin-left:auto; display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:8px 18px; font-size:clamp(10px,1.15vw,14px); }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--ok); flex:none; }
+  .top-status b { color:var(--text); font-weight:600; }
+  .top-status span { color:var(--text-2); }
+
+  /* ---- 主体双栏 ---- */
+  .grid { display:grid; grid-template-columns:5fr 7fr; gap:clamp(12px,1.8%,24px); margin-top:clamp(12px,2.4vh,24px); flex:1; min-height:0; }
+  .col { display:flex; flex-direction:column; gap:clamp(10px,1.8%,18px); min-height:0; }
+
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-card); padding:clamp(12px,2%,20px) clamp(14px,2.2%,22px); }
+  .card-title { font-size:clamp(11px,1.2vw,15px); font-weight:600; color:var(--text-2); letter-spacing:.08em; display:flex; align-items:center; gap:8px; }
+  .card-title::after { content:""; flex:1; height:1px; background:var(--line); }
+
+  /* 倒计时环卡 */
+  .timer-card { display:flex; align-items:center; gap:clamp(12px,1.8%,22px); }
+  .ring { position:relative; width:clamp(84px,11vw,136px); height:clamp(84px,11vw,136px); flex:none; }
+  .ring svg { width:100%; height:100%; transform:rotate(-90deg); }
+  .ring .val { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .ring .val b { font-size:clamp(18px,2.4vw,30px); font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1; }
+  .ring .val i { font-style:normal; font-size:clamp(9px,1vw,12px); color:var(--text-2); margin-top:2px; }
+  .timer-info { flex:1; min-width:0; }
+  .timer-info .next { font-size:clamp(11px,1.35vw,17px); color:var(--text-2); }
+  .timer-info .next b { color:var(--accent); font-weight:700; font-variant-numeric:tabular-nums; }
+  .info-rows { margin-top:clamp(8px,1.4vh,14px); display:flex; flex-direction:column; gap:clamp(5px,.9vh,9px); }
+  .info-row { display:flex; align-items:center; gap:8px; font-size:clamp(10px,1.1vw,14px); color:var(--text-2); }
+  .info-row .st { width:6px; height:6px; border-radius:50%; flex:none; }
+  .info-row .st.g { background:var(--ok); } .info-row .st.y { background:var(--warn); }
+  .info-row b { color:var(--text); font-weight:500; }
+  .info-row .rt { margin-left:auto; color:var(--hint); font-variant-numeric:tabular-nums; }
+
+  /* 设置项 */
+  .field { margin-top:clamp(10px,1.8vh,18px); }
+  .field-label { font-size:clamp(10px,1.15vw,14px); color:var(--text-2); margin-bottom:8px; display:flex; align-items:baseline; gap:8px; }
+  .field-label em { font-style:normal; color:var(--hint); font-size:.85em; }
+  .value-box { background:var(--surface-2); border:1.5px solid var(--line); border-radius:var(--radius-ctl); padding:10px 14px; font-size:clamp(11px,1.3vw,16px); color:var(--text); line-height:1.6; }
+  .chips { display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; }
+  .chip { background:var(--surface-2); border:1.5px solid var(--line); color:var(--text-2); border-radius:999px; padding:8px 18px; font-size:clamp(10px,1.1vw,14px); cursor:pointer; font-family:var(--font); transition:all .15s; font-variant-numeric:tabular-nums; }
+  .chip.on { background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:600; }
+  .num-row { display:flex; gap:12px; }
+  .num-row .cell { flex:1; }
+  .num-box { background:var(--surface-2); border:1.5px solid var(--line); border-radius:var(--radius-ctl); padding:10px 14px; font-size:clamp(11px,1.3vw,16px); font-variant-numeric:tabular-nums; display:flex; align-items:baseline; gap:4px; }
+  .num-box em { font-style:normal; color:var(--hint); font-size:.8em; }
+
+  /* Switch */
+  .switch-row { display:flex; align-items:center; gap:12px; padding:clamp(7px,1.2vh,11px) 0; border-bottom:1px dashed var(--line); font-size:clamp(11px,1.25vw,15px); }
+  .switch-row:last-child { border-bottom:none; }
+  .switch { width:44px; height:24px; border-radius:999px; background:var(--surface-2); border:1.5px solid var(--line); position:relative; flex:none; margin-left:auto; }
+  .switch::after { content:""; position:absolute; top:2px; left:2px; width:17px; height:17px; border-radius:50%; background:var(--hint); transition:all .15s; }
+  .switch.on { background:var(--accent); border-color:var(--accent); }
+  .switch.on::after { left:22px; background:#fff; }
+
+  /* 按钮组 */
+  .actions { display:flex; gap:12px; flex-wrap:wrap; }
+  .btn { border:none; border-radius:var(--radius-ctl); padding:12px 24px; font-size:clamp(11px,1.25vw,15px); font-family:var(--font); cursor:pointer; font-weight:600; transition:all .15s; }
+  .btn.primary { background:var(--accent); color:#0B1526; }
+  .btn.ghost { background:transparent; border:1.5px solid var(--line); color:var(--text-2); font-weight:500; }
+
+  /* ===== TV 焦点态（Tab / 点击元素体验遥控器焦点）===== */
+  .btn:focus-visible, .chip:focus-visible, .switch-row:focus-visible {
+    outline:none; transform:scale(1.06);
+    box-shadow:0 0 0 3px rgba(77,163,255,.4), 0 4px 28px rgba(77,163,255,.5);
+    border-color:var(--accent); color:var(--text);
+  }
+  .switch-row:focus-visible { border-radius:var(--radius-ctl); background:var(--accent-soft); }
+  .focus-demo { text-align:center; font-size:clamp(9px,1vw,12px); color:var(--hint); margin-top:clamp(8px,1.4vh,14px); }
+
+  /* 底部提示 */
+  .footer { flex:none; margin-top:clamp(10px,1.6vh,16px); display:flex; align-items:center; gap:8px; color:var(--hint); font-size:clamp(9px,1vw,12.5px); }
+  .footer svg { width:14px; height:14px; flex:none; }
+
+  /* ===== 屏 2：浮层演示 ===== */
+  .video-bg { position:absolute; inset:0; background:
+    radial-gradient(60% 80% at 70% 30%, #3d4a6b 0%, transparent 60%),
+    radial-gradient(50% 60% at 20% 70%, #5a4632 0%, transparent 55%),
+    radial-gradient(40% 50% at 85% 75%, #2d5247 0%, transparent 55%),
+    linear-gradient(160deg, #14161f 0%, #1c2030 100%); }
+  .video-bg::after { content:""; position:absolute; inset:0; background:linear-gradient(0deg, rgba(8,9,14,.5), transparent 40%); }
+  .fake-ui { position:absolute; left:clamp(20px,3.6%,48px); bottom:clamp(16px,3.2%,44px); display:flex; align-items:center; gap:10px; color:rgba(255,255,255,.75); font-size:clamp(10px,1.1vw,14px); z-index:1; }
+  .fake-ui .bar { width:clamp(120px,22%,300px); height:4px; border-radius:99px; background:rgba(255,255,255,.25); overflow:hidden; }
+  .fake-ui .bar i { display:block; width:38%; height:100%; background:rgba(255,255,255,.85); border-radius:99px; }
+
+  /* 浮层卡片 */
+  .overlay-card {
+    position:absolute; right:clamp(20px,3.6%,48px); bottom:clamp(16px,3.2%,44px);
+    width:clamp(240px,42%,560px); z-index:2;
+    background:rgba(22,24,32,.92); border:1px solid rgba(77,163,255,.35);
+    border-radius:20px; padding:clamp(14px,2%,22px) clamp(16px,2.2%,24px);
+    box-shadow:0 12px 48px rgba(0,0,0,.55); backdrop-filter:blur(8px);
+    animation:pop .45s cubic-bezier(.2,1.4,.4,1);
+  }
+  @keyframes pop { 0% { transform:translateY(24px) scale(.92); opacity:0; } 100% { transform:none; opacity:1; } }
+  .ov-head { display:flex; align-items:center; gap:12px; }
+  .ov-icon { width:clamp(28px,3.4vw,44px); height:clamp(28px,3.4vw,44px); border-radius:12px; background:var(--accent-soft); display:flex; align-items:center; justify-content:center; flex:none; }
+  .ov-icon svg { width:58%; height:58%; }
+  .ov-title { font-size:clamp(12px,1.5vw,19px); font-weight:700; }
+  .ov-count { margin-left:auto; font-size:clamp(10px,1.2vw,15px); color:var(--accent); font-weight:700; font-variant-numeric:tabular-nums; }
+  .ov-msg { margin-top:clamp(8px,1.4vh,12px); font-size:clamp(10px,1.3vw,16px); line-height:1.7; color:var(--text-2); }
+  .ov-msg b { color:var(--text); font-weight:600; }
+  .ov-progress { margin-top:clamp(10px,1.6vh,14px); height:5px; border-radius:99px; background:rgba(255,255,255,.12); overflow:hidden; }
+  .ov-progress i { display:block; height:100%; width:100%; border-radius:99px; background:linear-gradient(90deg, var(--accent), #7FBFFF); animation:shrink 10s linear forwards; }
+  @keyframes shrink { from { width:100%; } to { width:0%; } }
+
+  .legend { max-width:1280px; margin:16px auto 0; display:flex; gap:24px; flex-wrap:wrap; font-size:13px; color:#5A5E6E; }
+  .legend .sw { display:inline-block; width:12px; height:12px; border-radius:4px; margin-right:6px; vertical-align:-1px; }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>atv-break · 定时休息提醒 — TV UI 优化稿</h1>
+  <p>共 2 屏：① 设置页（遥控器优先，卡片化双栏）② 休息提醒浮层（叠加在视频播放之上）。点击 / Tab 任意按钮、胶囊、开关可预览遥控器焦点态。</p>
+</div>
+
+<!-- ================= 屏 1：设置页 ================= -->
+<div class="screen-wrap">
+  <div class="screen-label"><span class="no">1</span><span class="t">设置页（高保真）</span><span class="d">左状态 · 右设置 双栏卡片</span></div>
+
+  <div class="tv">
+    <!-- 顶栏 -->
+    <div class="topbar">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#4DA3FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      </div>
+      <div>
+        <div class="app-title">定时休息提醒</div>
+        <div class="app-sub">守护全家人的用眼健康</div>
+      </div>
+      <div class="top-status"><span class="dot"></span><b>计时中</b><span>· 提醒已开启</span></div>
+    </div>
+
+    <!-- 双栏 -->
+    <div class="grid">
+      <!-- 左：状态 -->
+      <div class="col">
+        <div class="card timer-card">
+          <div class="ring">
+            <svg viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="52" fill="none" stroke="#2A2D3A" stroke-width="9"/>
+              <circle cx="60" cy="60" r="52" fill="none" stroke="#4DA3FF" stroke-width="9" stroke-linecap="round" stroke-dasharray="237.4 326.7"/>
+            </svg>
+            <div class="val"><b>32</b><i>分钟 / 45</i></div>
+          </div>
+          <div class="timer-info">
+            <div class="next">距下次提醒还有 <b>13 分 02 秒</b></div>
+            <div class="info-rows">
+              <div class="info-row"><span class="st g"></span><b>后台守护</b>运行中<span class="rt">2 分钟前心跳</span></div>
+              <div class="info-row"><span class="st g"></span><b>悬浮窗权限</b>已授予</div>
+              <div class="info-row"><span class="st g"></span><b>开机自启</b>已生效<span class="rt">10-20 09:12</span></div>
+              <div class="info-row"><span class="st y"></span><b>电池优化</b>未忽略</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="flex:1">
+          <div class="card-title">开关</div>
+          <div class="switch-row" tabindex="0">启用定时提醒<div class="switch on"></div></div>
+          <div class="switch-row" tabindex="0">提醒时播放提示音<div class="switch on"></div></div>
+          <div class="switch-row" tabindex="0">提示音走闹钟音量（更不易漏听）<div class="switch"></div></div>
+        </div>
+      </div>
+
+      <!-- 右：设置 -->
+      <div class="col">
+        <div class="card">
+          <div class="card-title">提醒设置</div>
+
+          <div class="field" style="margin-top:12px">
+            <div class="field-label">提醒文案 <em>长文案建议编辑配置文件后导入</em></div>
+            <div class="value-box">你已经连续观看45分钟，建议休息15分钟后再继续看电视哦。</div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">触发阈值</div>
+            <div class="chips">
+              <button class="chip" tabindex="0">30 分钟</button>
+              <button class="chip on" tabindex="0">45 分钟</button>
+              <button class="chip" tabindex="0">60 分钟</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="num-row">
+              <div class="cell">
+                <div class="field-label">自动关闭</div>
+                <div class="num-row">
+                  <div class="cell"><div class="num-box">10<em>秒</em></div></div>
+                </div>
+                <div class="chips">
+                  <button class="chip" tabindex="0">15 秒</button>
+                  <button class="chip" tabindex="0">30 秒</button>
+                  <button class="chip" tabindex="0">1 分钟</button>
+                </div>
+              </div>
+              <div class="cell">
+                <div class="field-label">息屏多久清零</div>
+                <div class="num-box">10<em>分钟</em></div>
+                <div class="chips"><button class="chip" tabindex="0">设为永不清零</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">操作</div>
+          <div class="actions" style="margin-top:12px">
+            <button class="btn primary" tabindex="0">保存并应用</button>
+            <button class="btn ghost" tabindex="0">立即测试浮层</button>
+            <button class="btn ghost" tabindex="0">重置计时</button>
+          </div>
+          <div class="actions" style="margin-top:12px">
+            <button class="btn ghost" tabindex="0">从文件导入</button>
+            <button class="btn ghost" tabindex="0">导出到文件</button>
+            <button class="btn ghost" tabindex="0">去授权悬浮窗</button>
+            <button class="btn ghost" tabindex="0">加入电池白名单</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#6E7280" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>
+      配置文件：/sdcard/Android/data/com.atvbreak/files/config.json　·　遥控器：方向键移动焦点，确认键选中
+    </div>
+  </div>
+</div>
+
+<!-- ================= 屏 2：浮层 ================= -->
+<div class="screen-wrap">
+  <div class="screen-label"><span class="no">2</span><span class="t">休息提醒浮层（叠加于视频播放）</span><span class="d">右下角 · 10 秒倒计时自动关闭</span></div>
+
+  <div class="tv">
+    <div class="video-bg"></div>
+    <div class="fake-ui">
+      <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="2" width="16" height="16" stroke-linecap="round"><path d="M8 5v14l11-7z" fill="rgba(255,255,255,.75)" stroke="none"/></svg>
+      正在播放 · Nature Documentary S01E03
+      <div class="bar"><i></i></div>
+      <span>42:18 / 1:52:00</span>
+    </div>
+
+    <div class="overlay-card">
+      <div class="ov-head">
+        <div class="ov-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#4DA3FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <div class="ov-title">该休息一下啦</div>
+        <div class="ov-count">10s</div>
+      </div>
+      <div class="ov-msg">你已经连续观看 <b>45 分钟</b>，建议休息 <b>15 分钟</b>后再继续看电视哦。</div>
+      <div class="ov-progress"><i></i></div>
+    </div>
+  </div>
+  <div class="legend">
+    <span><span class="sw" style="background:#4DA3FF"></span>主色 #4DA3FF（沿用现有）</span>
+    <span><span class="sw" style="background:#191B23"></span>卡片表面 #191B23</span>
+    <span><span class="sw" style="background:#57C98A"></span>正常状态 #57C98A</span>
+    <span><span class="sw" style="background:#FFB05C"></span>提醒状态 #FFB05C</span>
+    <span>圆角体系：卡片 16px / 控件 12px · 间距基数 8px · 焦点放大 1.06 + 蓝色光晕</span>
+  </div>
+</div>
+
+</body>
+</html>

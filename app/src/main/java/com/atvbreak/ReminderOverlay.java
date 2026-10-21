@@ -30,6 +30,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.animation.AlphaAnimation;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 /**
@@ -49,6 +50,16 @@ public final class ReminderOverlay {
     private static final Handler handler = new Handler(Looper.getMainLooper());
     private static final Runnable dismissTask = ReminderOverlay::dismissInternal;
 
+    /** 浮层倒计时：总时长与起始时刻，用于驱动进度条与「Ns」读数。 */
+    private static long dismissTotalMs = 10_000L;
+    private static long dismissStartMs;
+    private static final Runnable countdownTask = new Runnable() {
+        @Override
+        public void run() {
+            tickCountdown();
+        }
+    };
+
     private ReminderOverlay() {
     }
 
@@ -62,6 +73,7 @@ public final class ReminderOverlay {
     public static synchronized void show(Context c, AppConfig cfg) {
         Context ctx = c.getApplicationContext();
         handler.removeCallbacks(dismissTask);
+        handler.removeCallbacks(countdownTask);
 
         if (!canDrawOverlays(ctx)) {
             Log.w(TAG, "未授予悬浮窗权限，无法展示提醒浮层");
@@ -98,11 +110,35 @@ public final class ReminderOverlay {
 
         long dismissMs = cfg.dismissMillis();
         long delay = dismissMs > 0 ? dismissMs : 10_000L;
+        dismissTotalMs = delay;
+        dismissStartMs = System.currentTimeMillis();
+        tickCountdown();
         handler.postDelayed(dismissTask, delay);
+    }
+
+    /** 每 100ms 更新一次倒计时读数与进度条，归零后停止。 */
+    private static void tickCountdown() {
+        if (overlayView == null) {
+            return;
+        }
+        long remain = Math.max(0L, dismissTotalMs - (System.currentTimeMillis() - dismissStartMs));
+        ProgressBar bar = overlayView.findViewById(R.id.overlay_progress);
+        TextView tv = overlayView.findViewById(R.id.overlay_countdown);
+        if (bar != null) {
+            bar.setProgress((int) (1000L * remain / Math.max(1L, dismissTotalMs)));
+        }
+        if (tv != null) {
+            tv.setText(overlayView.getContext().getString(R.string.overlay_countdown,
+                    (int) ((remain + 999L) / 1000L)));
+        }
+        if (remain > 0L) {
+            handler.postDelayed(countdownTask, 100L);
+        }
     }
 
     public static synchronized void dismiss(Context c) {
         handler.removeCallbacks(dismissTask);
+        handler.removeCallbacks(countdownTask);
         dismissInternal();
     }
 
