@@ -11,6 +11,12 @@
 - 依赖：零第三方库，只用 Android 框架 API
 - 兼容：`minSdk 21`（Android 5.0+）→ `targetSdk 34`，leanback 非强制（有 TV 桌面走 LEANBACK_LAUNCHER，没有也能装）
 
+## 界面预览
+
+主界面（1080p TV 实机截图）：
+
+![主界面](docs/images/screenshot-main.png)
+
 ## 一、低开销是怎么做到的
 
 | 需求 | 实现 | 开销 |
