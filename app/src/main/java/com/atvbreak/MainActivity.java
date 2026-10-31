@@ -100,6 +100,9 @@ public class MainActivity extends Activity {
     private final Button[] continuousConfigButtons = new Button[7];
 
     private View[] tabs;
+    /** tab 标题与下划线：选中态要分别下发（文字色 / 下划线），容器自身不承载样式。 */
+    private TextView[] tabLabels;
+    private View[] tabUnderlines;
     private View[] pages;
 
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
@@ -154,12 +157,20 @@ public class MainActivity extends Activity {
         // tab 栏与三个页面（切换只改 visibility，不重建视图）
         tabs = new View[]{findViewById(R.id.tab_overview), findViewById(R.id.tab_continuous),
                 findViewById(R.id.tab_daily)};
+        tabLabels = new TextView[]{findViewById(R.id.tab_overview_label),
+                findViewById(R.id.tab_continuous_label), findViewById(R.id.tab_daily_label)};
+        tabUnderlines = new View[]{findViewById(R.id.tab_overview_underline),
+                findViewById(R.id.tab_continuous_underline), findViewById(R.id.tab_daily_underline)};
         pages = new View[]{findViewById(R.id.page_overview), findViewById(R.id.page_continuous),
                 findViewById(R.id.page_daily)};
         for (int i = 0; i < tabs.length; i++) {
             final int index = i;
             tabs[i].setOnClickListener(v -> switchTab(index));
-            tabs[i].setOnFocusChangeListener(focusHighlightListener);
+            tabs[i].setOnFocusChangeListener((v, hasFocus) -> {
+                focusHighlightListener.onFocusChange(v, hasFocus);
+                // 文字没有自己的焦点，用 selected 把「遥控器光标停在这」传给颜色选择器
+                tabLabels[index].setSelected(hasFocus);
+            });
         }
 
         AppConfig cfg = AppConfig.fromPrefsOnly(this);
@@ -319,10 +330,64 @@ public class MainActivity extends Activity {
         }
         currentTab = index;
         for (int i = 0; i < pages.length; i++) {
-            pages[i].setVisibility(i == index ? View.VISIBLE : View.GONE);
-            tabs[i].setActivated(i == index);
+            boolean active = i == index;
+            pages[i].setVisibility(active ? View.VISIBLE : View.GONE);
+            tabLabels[i].setActivated(active);
+            tabUnderlines[i].setActivated(active);
         }
+        applyFocusTargets();
         refreshEnabledStates();
+    }
+
+    /**
+     * 焦点目标必须按「当前页」动态设置。
+     *
+     * 写死 id 会指向隐藏页里的控件：GONE 的视图不参与焦点搜索，显式 id 却仍会被解析，
+     * 结果按上键落到一个看不见的控件上——没有高亮，像是遥控器失灵。
+     */
+    private void applyFocusTargets() {
+        View first = pages[currentTab].findViewById(firstFocusIdOf(currentTab));
+        View last = pages[currentTab].findViewById(lastFocusIdOf(currentTab));
+        if (first != null) {
+            first.setNextFocusUpId(tabs[currentTab].getId());
+        }
+        if (last != null) {
+            last.setNextFocusDownId(R.id.btn_save);
+        }
+        for (int i = 0; i < tabs.length; i++) {
+            tabs[i].setNextFocusDownId(firstFocusIdOf(i));
+        }
+        // 底部常驻栏的「上键」回到当前页最后一项
+        for (int id : new int[]{R.id.btn_save, R.id.btn_import, R.id.btn_export}) {
+            View v = findViewById(id);
+            if (v != null) {
+                v.setNextFocusUpId(lastFocusIdOf(currentTab));
+            }
+        }
+    }
+
+    private static int firstFocusIdOf(int tab) {
+        switch (tab) {
+            case TAB_CONTINUOUS:
+                return R.id.et_message;
+            case TAB_DAILY:
+                return R.id.cb_daily_enabled;
+            case TAB_OVERVIEW:
+            default:
+                return R.id.cb_enabled;
+        }
+    }
+
+    private static int lastFocusIdOf(int tab) {
+        switch (tab) {
+            case TAB_CONTINUOUS:
+                return R.id.btn_reset;
+            case TAB_DAILY:
+                return R.id.btn_daily_test;
+            case TAB_OVERVIEW:
+            default:
+                return R.id.btn_battery;
+        }
     }
 
     /**
@@ -384,13 +449,14 @@ public class MainActivity extends Activity {
                 ? AppConfig.SOUND_STREAM_ALARM : AppConfig.SOUND_STREAM_NOTIFICATION;
         // 每日累计：越界一律钳制到范围内（与配置文件解析同口径）
         cfg.dailyEnabled = cbDailyEnabled.isChecked();
-        cfg.dailyThresholdMinutes = AppConfig.clamp(intOf(etDailyThreshold,
+        // 与配置文件解析同口径：越界一律钳制到范围（0 钳到下界），不回落默认值
+        cfg.dailyThresholdMinutes = AppConfig.clamp(intOfRaw(etDailyThreshold,
                         AppConfig.DEFAULT_DAILY_THRESHOLD_MINUTES),
                 AppConfig.DAILY_THRESHOLD_MIN, AppConfig.DAILY_THRESHOLD_MAX);
-        cfg.dailyMaskSeconds = AppConfig.clamp(intOf(etDailyMask,
+        cfg.dailyMaskSeconds = AppConfig.clamp(intOfRaw(etDailyMask,
                         AppConfig.DEFAULT_DAILY_MASK_SECONDS),
                 AppConfig.DAILY_MASK_SECONDS_MIN, AppConfig.DAILY_MASK_SECONDS_MAX);
-        cfg.dailyRepeatMinutes = AppConfig.clamp(intOfAllowZero(etDailyRepeat,
+        cfg.dailyRepeatMinutes = AppConfig.clamp(intOfRaw(etDailyRepeat,
                         AppConfig.DEFAULT_DAILY_REPEAT_MINUTES),
                 AppConfig.DAILY_REPEAT_MINUTES_MIN, AppConfig.DAILY_REPEAT_MINUTES_MAX);
         cfg.save(this);
@@ -454,6 +520,18 @@ public class MainActivity extends Activity {
         }
     }
 
+    /**
+     * 原样取整（非数字才回落默认值），不做正数校验。
+     * 每日累计字段要靠它把 0 / 负数交给 {@link AppConfig#clamp} 钳到下界。
+     */
+    private static int intOfRaw(EditText et, int def) {
+        try {
+            return Integer.parseInt(et.getText().toString().trim());
+        } catch (NumberFormatException e) {
+            return def;
+        }
+    }
+
     /** 与 {@link #intOf} 相同，但允许 0（息屏清零时长填 0 表示永不清零）。 */
     private static int intOfAllowZero(EditText et, int def) {
         try {
@@ -478,17 +556,17 @@ public class MainActivity extends Activity {
 
         setActivated(R.id.chip_reset_never, intOfAllowZero(etResetOff, -1) == 0);
 
-        int dailyThreshold = intOf(etDailyThreshold, 0);
+        int dailyThreshold = intOfRaw(etDailyThreshold, 0);
         setActivated(R.id.btn_daily_1h, dailyThreshold == 60);
         setActivated(R.id.btn_daily_2h, dailyThreshold == 120);
         setActivated(R.id.btn_daily_3h, dailyThreshold == 180);
 
-        int maskSeconds = intOf(etDailyMask, 0);
+        int maskSeconds = intOfRaw(etDailyMask, 0);
         setActivated(R.id.btn_daily_mask_30, maskSeconds == 30);
         setActivated(R.id.btn_daily_mask_60, maskSeconds == 60);
         setActivated(R.id.btn_daily_mask_90, maskSeconds == 90);
 
-        int repeat = intOfAllowZero(etDailyRepeat, -1);
+        int repeat = intOfRaw(etDailyRepeat, -1);
         setActivated(R.id.btn_daily_repeat_none, repeat == 0);
         setActivated(R.id.btn_daily_repeat_30, repeat == 30);
         setActivated(R.id.btn_daily_repeat_60, repeat == 60);

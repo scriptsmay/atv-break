@@ -75,6 +75,13 @@ public final class ReminderOverlay {
         handler.removeCallbacks(dismissTask);
         handler.removeCallbacks(countdownTask);
 
+        // 提醒仲裁：全屏 mask 优先。mask 显示期间不叠小浮层、不叠第二路提示音，
+        // 否则小浮层会压住 mask 标题，两段提示音也会互相打断。
+        if (DailyMaskOverlay.isShowing()) {
+            Log.i(TAG, "全屏提醒正在显示，跳过本次小浮层");
+            return;
+        }
+
         if (!canDrawOverlays(ctx)) {
             Log.w(TAG, "未授予悬浮窗权限，无法展示提醒浮层");
             return;

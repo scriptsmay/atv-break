@@ -74,8 +74,25 @@ public class WatchTimerService extends Service {
     /** 看门狗周期：15 分钟。开销接近零，只做一次状态对账。 */
     static final long TICK_INTERVAL_MS = 15L * 60L * 1000L;
 
-    /** DAILY 到点但未能展示（前台 / 息屏 / 权限缺失）时的重试间隔。 */
+    /**
+     * DAILY 到点但未能展示（前台 / 息屏 / 权限缺失）时的首次重试间隔。
+     * 连续失败时按 {@link #nextRetryDelay(long)} 指数退避，避免「每分钟一次唤醒」永不停歇。
+     */
     static final long DAILY_RETRY_MS = 60_000L;
+    /** 退避上限：不超过看门狗周期，保证状态恢复后最迟一个 TICK 内重新排上。 */
+    static final long DAILY_RETRY_MAX_MS = TICK_INTERVAL_MS;
+
+    /** 连续失败第 n 次（从 1 开始）后的重试间隔：1 分 → 2 分 → 4 分 → … → 15 分封顶。 */
+    static long nextRetryDelay(int failures) {
+        long delay = DAILY_RETRY_MS;
+        for (int i = 1; i < failures; i++) {
+            delay *= 2L;
+            if (delay >= DAILY_RETRY_MAX_MS) {
+                return DAILY_RETRY_MAX_MS;
+            }
+        }
+        return delay;
+    }
 
     private static final String ST_ACC = "st_accumulated_ms";
     private static final String ST_ON_SINCE = "st_screen_on_since";
@@ -85,6 +102,8 @@ public class WatchTimerService extends Service {
     /** 上次收到开机广播的时刻（elapsedRealtime / 墙上时间）。 */
     private static final String ST_BOOT_AT = "st_boot_at";
     private static final String ST_BOOT_WALL = "st_boot_wall";
+    /** DAILY 连续未展示次数（退避用，落盘以便进程重启后继续退避）。 */
+    private static final String K_DAILY_FAILS = "daily_fail_count";
 
     private AppConfig cfg;
     private AlarmManager alarm;
@@ -573,6 +592,8 @@ public class WatchTimerService extends Service {
      * 不再排到过去，而是立即触发一次。
      */
     static void scheduleDaily(Context c) {
+        // 成功排上（或已关闭）后清空退避计数
+        AppConfig.prefs(c).edit().remove(K_DAILY_FAILS).apply();
         scheduleDaily(c, true);
     }
 
@@ -633,7 +654,7 @@ public class WatchTimerService extends Service {
             return;
         }
         if (delay <= 0L) {
-            delay = DAILY_RETRY_MS;
+            delay = nextRetryDelay(bumpFailures(c));
         }
 
         long triggerAt = nowElapsed + delay;
@@ -698,6 +719,13 @@ public class WatchTimerService extends Service {
             // 未展示成功：不要等到下一个重复间隔，尽快重试
             scheduleDaily(c, false);
         }
+    }
+
+    /** 记录一次「到点但没能展示」并返回连续失败次数。 */
+    private static int bumpFailures(Context c) {
+        int n = AppConfig.prefs(c).getInt(K_DAILY_FAILS, 0) + 1;
+        AppConfig.prefs(c).edit().putInt(K_DAILY_FAILS, n).apply();
+        return n;
     }
 
     /** 关闭开关时调用：取消闹钟并收起正在显示的全屏 mask。 */

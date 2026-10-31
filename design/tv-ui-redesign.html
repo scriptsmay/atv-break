@@ -58,15 +58,22 @@
   .top-status b { color:var(--text); font-weight:600; }
   .top-status span { color:var(--text-2); }
 
-  /* ---- tab 栏 ---- */
-  .tabs { display:flex; gap:10px; flex:none; margin-top:20px; }
+  /* ---- tab 栏：文字 + 下划线指示 ---- */
+  /* 刻意不用胶囊：页内预设值是「实心胶囊 + 描边」，tab 是「纯文字 + 下划线」，形状不撞车 */
+  .tabs { display:flex; gap:40px; flex:none; margin-top:16px; padding:0 2px; border-bottom:1px solid var(--line); }
   .tab {
-    background:transparent; border:1.5px solid var(--line); color:var(--text-2);
-    border-radius:999px; padding:9px 26px; font-size:15px;
-    font-family:var(--font); font-weight:500; cursor:pointer; transition:all .15s;
+    position:relative; background:none; border:none; color:var(--text-2);
+    padding:14px 0 12px; font-size:22px; letter-spacing:-.01em;
+    font-family:var(--font); font-weight:700; cursor:pointer; transition:color .15s;
   }
-  .tab.on { background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:600; }
-  .tab:focus-visible { outline:none; transform:scale(1.06); box-shadow:0 0 0 3px rgba(77,163,255,.4), 0 4px 28px rgba(77,163,255,.5); border-color:var(--accent); color:var(--text); }
+  .tab.on { color:var(--text); }
+  .tab.on::after {
+    content:""; position:absolute; left:0; right:0; bottom:0; height:4px;
+    background:var(--accent); border-radius:2px 2px 0 0;
+  }
+  /* 焦点 = 光标停在这（文字转主色），选中 = 当前页（白字 + 下划线），两个通道互不覆盖 */
+  .tab:focus-visible { outline:none; color:var(--accent); transform:scale(1.06); }
+  .tab.on:focus-visible { color:var(--text); }
 
   /* ---- tab 页面（互斥显示） ---- */
   .pane { display:none; flex:1; min-height:0; margin-top:20px; overflow-y:auto; padding-right:6px; }
@@ -208,6 +215,7 @@
 <div class="page-head">
   <h1>atv-break · 定时休息提醒 — TV UI 优化稿</h1>
   <p>共 6 屏：①②③ 设置页三 tab（总览 / 连续提醒 / 每日累计）· ④ 主开关关闭的置灰态 · ⑤ 连续提醒浮层 · ⑥ 每日全屏提醒。点击 / Tab 任意按钮、胶囊、开关可预览遥控器焦点态。</p>
+  <p>tab 栏：22px 加粗文字 + 4px 主色下划线标当前页，通栏 1px 基准线与内容区连成一体；焦点态文字转主色并放大 1.06，与「当前页」是两个独立通道。</p>
   <p>可用高度校验：1080p 减 overscan（上下各 5%）与顶栏 / tab 栏 / 底部栏后，每页内容区可用 ≈788dp，三页实际高度 482~610dp，<b>全程不滚动</b>。</p>
 </div>
 

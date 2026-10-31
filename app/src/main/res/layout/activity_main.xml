@@ -79,42 +79,96 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- ===== tab 栏 ===== -->
+    <!--
+      ===== tab 栏：文字 + 下划线指示 =====
+      通栏 1dp 基准线把 tab 栏和下方内容连成一体，暗示「下面整块都是当前 tab 展开的」。
+      下划线与基准线贴合，宽度跟随文字宽度。
+    -->
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="18dp"
-        android:orientation="horizontal">
+        android:layout_marginTop="16dp"
+        android:orientation="vertical">
 
-        <Button
-            android:id="@+id/tab_overview"
-            style="@style/AtvChip"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:nextFocusRight="@+id/tab_continuous"
-            android:nextFocusDown="@+id/cb_enabled"
-            android:text="@string/tab_overview" />
+            android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/tab_continuous"
-            style="@style/AtvChip"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:nextFocusLeft="@+id/tab_overview"
-            android:nextFocusRight="@+id/tab_daily"
-            android:nextFocusDown="@+id/et_message"
-            android:text="@string/tab_continuous" />
+            <LinearLayout
+                android:id="@+id/tab_overview"
+                style="@style/AtvTabItem"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:nextFocusRight="@+id/tab_continuous">
 
-        <Button
-            android:id="@+id/tab_daily"
-            style="@style/AtvChip"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:nextFocusLeft="@+id/tab_continuous"
-            android:nextFocusDown="@+id/cb_daily_enabled"
-            android:text="@string/tab_daily" />
+                <TextView
+                    android:id="@+id/tab_overview_label"
+                    style="@style/AtvTabLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/tab_overview" />
+
+                <View
+                    android:id="@+id/tab_overview_underline"
+                    style="@style/AtvTabUnderline"
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/tab_continuous"
+                style="@style/AtvTabItem"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="40dp"
+                android:nextFocusLeft="@+id/tab_overview"
+                android:nextFocusRight="@+id/tab_daily">
+
+                <TextView
+                    android:id="@+id/tab_continuous_label"
+                    style="@style/AtvTabLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/tab_continuous" />
+
+                <View
+                    android:id="@+id/tab_continuous_underline"
+                    style="@style/AtvTabUnderline"
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/tab_daily"
+                style="@style/AtvTabItem"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="40dp"
+                android:nextFocusLeft="@+id/tab_continuous">
+
+                <TextView
+                    android:id="@+id/tab_daily_label"
+                    style="@style/AtvTabLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/tab_daily" />
+
+                <View
+                    android:id="@+id/tab_daily_underline"
+                    style="@style/AtvTabUnderline"
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/line" />
     </LinearLayout>
 
     <!-- ===== 内容区（三页互斥显示） ===== -->
@@ -406,7 +460,6 @@
                             style="@style/AtvSwitch"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:nextFocusUp="@+id/cb_enabled"
                             android:nextFocusDown="@+id/cb_sound_alarm" />
                     </LinearLayout>
 
@@ -1093,7 +1146,6 @@
             style="@style/AtvButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:nextFocusUp="@+id/cb_enabled"
             android:nextFocusRight="@+id/btn_import"
             android:text="@string/action_save" />
 
@@ -1105,7 +1157,6 @@
             android:layout_marginStart="12dp"
             android:nextFocusLeft="@+id/btn_save"
             android:nextFocusRight="@+id/btn_export"
-            android:nextFocusUp="@+id/cb_enabled"
             android:text="@string/action_import" />
 
         <Button
@@ -1115,7 +1166,6 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:nextFocusLeft="@+id/btn_import"
-            android:nextFocusUp="@+id/cb_enabled"
             android:text="@string/action_export" />
 
         <TextView

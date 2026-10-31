@@ -86,14 +86,25 @@ public class DailyWatchStatsTest {
         assertTrue(r.rolled);
         assertEquals("2026-10-30", r.prevDay);
         assertEquals("昨日应记 20 分钟", 20L * MIN, r.prevTotal);
-        assertEquals("今日应记 30 分钟", 30L * MIN, s.accMs);
         assertEquals("2026-10-31", s.day);
         // 当前亮屏段只保留午夜之后的部分
         assertEquals(nowWall - 30L * MIN, s.onSinceWall);
         assertEquals(500_000L + 50L * MIN - 30L * MIN, s.onSinceElapsed);
-        // 历史落盘
+        // 关键：今日总量必须恰好是 30 分钟，不能被算两遍
+        assertEquals("今日应记 30 分钟（含正在进行的亮屏段）",
+                30L * MIN, totalOf(s, 500_000L + 50L * MIN));
+        // 历史落盘：昨日是最终值；今日按「已落盘的 accMs」写（当前亮屏段会在息屏时补写）
         assertEquals(Long.valueOf(20L * MIN), h.get("2026-10-30"));
-        assertEquals(Long.valueOf(30L * MIN), h.get("2026-10-31"));
+        assertEquals(Long.valueOf(0L), h.get("2026-10-31"));
+    }
+
+    /** 今日总量 = 已累计 + 正在进行的亮屏段，与 todayTotalMs() 的口径一致。 */
+    private static long totalOf(DailyWatchStats.State s, long nowElapsed) {
+        long total = s.accMs;
+        if (s.onSinceElapsed >= 0) {
+            total += Math.max(0L, nowElapsed - s.onSinceElapsed);
+        }
+        return total;
     }
 
     @Test
@@ -110,7 +121,7 @@ public class DailyWatchStatsTest {
         DailyWatchStats.Roll r = DailyWatchStats.rollDayIfNeeded(s, 10_000L + 40L * MIN, nowWall, h);
 
         assertEquals("上一日 = 1 小时 + 23:30~00:00 的 30 分钟", 1L * HOUR + 30L * MIN, r.prevTotal);
-        assertEquals("今日归零后只有 00:00~00:10", 10L * MIN, s.accMs);
+        assertEquals("今日只有 00:00~00:10", 10L * MIN, totalOf(s, 10_000L + 40L * MIN));
     }
 
     @Test
@@ -128,7 +139,26 @@ public class DailyWatchStatsTest {
         DailyWatchStats.Roll r = DailyWatchStats.rollDayIfNeeded(s, 1_000L + 30L * MIN, nowWall, h);
 
         assertEquals("上一日不增", 0L, r.prevTotal);
-        assertEquals("整段归今天", 30L * MIN, s.accMs);
+        assertEquals("整段归今天", 30L * MIN, totalOf(s, 1_000L + 30L * MIN));
+    }
+
+    @Test
+    public void wallClockJumpForwardDoesNotInflateToday() {
+        // 23:50 亮屏；00:10 时用户把时区调快 3 小时（墙钟跳 +3h）。
+        // 真实观看只有 20 分钟，今日不能被墙钟跳变放大。
+        DailyWatchStats.State s = freshState();
+        Map<String, Long> h = history();
+        s.day = "2026-10-30";
+        s.accMs = 0L;
+        s.onSinceElapsed = 1_000L;
+        s.onSinceWall = wall(2026, 10, 30, 23, 50);
+
+        long nowElapsed = 1_000L + 20L * MIN;
+        long nowWall = wall(2026, 10, 31, 3, 10);   // 时区跳变后的墙钟
+        DailyWatchStats.rollDayIfNeeded(s, nowElapsed, nowWall, h);
+
+        assertTrue("今日不能超过真实观看时长", totalOf(s, nowElapsed) <= 20L * MIN);
+        assertTrue("今日不能出现负数", totalOf(s, nowElapsed) >= 0L);
     }
 
     // ---------- 跨天：息屏状态 ----------

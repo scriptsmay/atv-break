@@ -39,6 +39,33 @@
         <item name="android:background">@drawable/bg_chip</item>
     </style>
 
+    <!--
+      tab 项：文字 + 下划线指示，刻意不用胶囊背景。
+      页内预设值是「实心胶囊 + 描边」，tab 是「纯文字 + 下划线」，两种形状不撞车。
+    -->
+    <style name="AtvTabItem">
+        <item name="android:orientation">vertical</item>
+        <item name="android:gravity">center_horizontal</item>
+        <item name="android:focusable">true</item>
+        <item name="android:clickable">true</item>
+        <item name="android:paddingTop">14dp</item>
+        <item name="android:paddingBottom">0dp</item>
+    </style>
+
+    <style name="AtvTabLabel">
+        <item name="android:textSize">22sp</item>
+        <!-- 三个 tab 统一加粗：只让选中项加粗会在切换时改变文字宽度，整条 tab 栏左右跳动 -->
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/tab_label</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:letterSpacing">-0.01</item>
+    </style>
+
+    <style name="AtvTabUnderline">
+        <item name="android:background">@drawable/bg_tab_underline</item>
+    </style>
+
     <!-- 开关：只有开关本体，文字由同行 TextView 承担 -->
     <style name="AtvSwitch" parent="android:Widget.DeviceDefault.CompoundButton.CheckBox">
         <item name="android:button">@drawable/bg_switch</item>

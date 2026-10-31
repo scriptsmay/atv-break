@@ -115,16 +115,21 @@ public final class DailyWatchStats {
         String prevDay = s.day;
         long prevTotal;
         if (s.onSinceElapsed >= 0) {
-            // 当前亮屏段 = [onSinceWall, nowWall]，午夜之后的部分 carry 归今天
+            // 当前亮屏段 = [onSinceWall, nowWall]，午夜之后的部分 carry 归今天。
+            //
+            // 注意：carry 必须留在「当前亮屏段」里，不能同时写进 accMs——否则
+            // todayTotal = accMs + (now - onSince) 会把这段算两遍（跨天当天的累计直接翻倍）。
+            // 段长用单调时钟计算，carry 再按段长截断：墙钟被校时/切时区跳变时，
+            // 不会把不存在的时长塞进今天。
             long midnight = midnightWall(nowWall);
             long segStart = Math.min(s.onSinceWall, nowWall);   // 防墙钟回拨
-            long segTotal = Math.max(0L, nowWall - segStart);
-            long carry = Math.max(0L, nowWall - Math.max(segStart, midnight));
-            carry = Math.min(carry, segTotal);
-            prevTotal = s.accMs + (segTotal - carry);
-            s.accMs = carry;
+            long segElapsed = Math.max(0L, nowElapsed - s.onSinceElapsed);
+            long carryWall = Math.max(0L, nowWall - Math.max(segStart, midnight));
+            long carry = Math.min(carryWall, segElapsed);
+            prevTotal = s.accMs + (segElapsed - carry);
+            s.accMs = 0L;
             s.onSinceElapsed = nowElapsed - carry;
-            s.onSinceWall = nowWall - carry;
+            s.onSinceWall = Math.max(segStart, midnight);
         } else {
             prevTotal = s.accMs;
             s.accMs = 0L;

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  tab 标题文字色：
+  activated（当前页）> selected（遥控器焦点停在本 tab）> 常态。
+  选中态压过焦点态——焦点只是「光标在这」，不该盖掉「这是当前页」。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/text_primary" android:state_activated="true" />
+    <item android:color="@color/accent" android:state_selected="true" />
+    <item android:color="@color/text_secondary" />
+</selector>

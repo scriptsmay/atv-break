@@ -91,7 +91,7 @@
     <string name="label_daily_limit">上限 %1$s · 昨日 %2$s</string>
     <string name="label_daily_yesterday_none">—</string>
     <string name="label_daily_status">今日累计</string>
-    <string name="daily_status_compact">今日累计 %1$s / %2$s</string>
+    <string name="daily_status_compact">%1$s / %2$s</string>
     <string name="daily_status_over">已超上限 · 今日 %1$s</string>
     <string name="daily_status_over_foreground">已超上限 · 打开应用期间不弹提醒</string>
     <string name="preset_daily_1h">1 小时</string>
