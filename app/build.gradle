@@ -34,5 +34,9 @@ android {
 }
 
 dependencies {
-    // 无第三方依赖：只用 Android 框架 API（org.json 为框架内置）
+    // 运行时无第三方依赖：只用 Android 框架 API（org.json 为框架内置）。
+    // JUnit 仅用于本地单元测试（testImplementation，不会打进 APK）。
+    testImplementation 'junit:junit:4.13.2'
+    // 本地单测需要真实的 org.json 实现（android.jar 里的是抛异常的桩）
+    testImplementation 'org.json:json:20240303'
 }

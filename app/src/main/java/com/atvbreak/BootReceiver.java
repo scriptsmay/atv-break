@@ -49,6 +49,11 @@ public class BootReceiver extends BroadcastReceiver {
                 || Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
             Log.i(TAG, "收到 " + action + "，启动计时服务");
             WatchTimerService.markBoot(context);
+            // 重启后 elapsedRealtime 归零，两条计时线的段起点都显式失效。
+            // 应用升级（MY_PACKAGE_REPLACED）不是重启，时钟连续，不能清掉当前段。
+            if (!Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
+                WatchTimerService.clearSessionStart(context);
+            }
             WatchTimerService.reconcile(context);
             WatchTimerService.start(context);
             WatchTimerService.reschedule(context);

@@ -177,14 +177,18 @@ public class WatchTimerService extends Service {
         accumulatedMs = p.getLong(ST_ACC, 0L);
         screenOnSince = p.getLong(ST_ON_SINCE, -1L);
         screenOffMark = p.getLong(ST_OFF_MARK, -1L);
+        // elapsedRealtime 重启后归零，持久化的起点会变成「未来时刻」。
+        // 仅靠 > now 比较不可靠（保存值若早于重启后已过的时间，会凭空多算），
+        // 因此异常值一律显式失效，由随后的 reconcile 按当前屏幕状态重建起点。
         long now = SystemClock.elapsedRealtime();
         if (screenOnSince > now) {
-            screenOnSince = now;
+            screenOnSince = -1L;
         }
         if (screenOffMark > now) {
-            screenOffMark = now;
+            screenOffMark = -1L;
         }
         persistState();
+        DailyWatchStats.sanitizeSessionStart(this);
     }
 
     /**
@@ -229,6 +233,19 @@ public class WatchTimerService extends Service {
                 .putLong(ST_ON_SINCE, onSince)
                 .putLong(ST_OFF_MARK, offMark)
                 .apply();
+        DailyWatchStats.reconcile(c);
+    }
+
+    /**
+     * 开机后显式失效：elapsedRealtime 归零使持久化的段起点失效。
+     * 当日累计保留，重启瞬间的亮屏段不补计。
+     */
+    static void clearSessionStart(Context c) {
+        AppConfig.prefs(c).edit()
+                .putLong(ST_ON_SINCE, -1L)
+                .putLong(ST_OFF_MARK, -1L)
+                .apply();
+        DailyWatchStats.clearSessionStart(c);
     }
 
     private void onScreenOn() {
