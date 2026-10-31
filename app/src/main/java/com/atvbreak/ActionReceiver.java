@@ -33,6 +33,9 @@ import android.util.Log;
  *   adb shell am broadcast -a com.atvbreak.action.RESET_TIMER    -n com.atvbreak/.ActionReceiver
  *   adb shell am broadcast -a com.atvbreak.action.RELOAD_CONFIG  -n com.atvbreak/.ActionReceiver
  *   adb shell am broadcast -a com.atvbreak.action.TICK           -n com.atvbreak/.ActionReceiver
+ *   adb shell am broadcast -a com.atvbreak.action.TEST_DAILY_MASK -n com.atvbreak/.ActionReceiver
+ *   adb shell am broadcast -a com.atvbreak.action.DAILY_ROLL_DAY --es day 2026-10-30 \
+ *       -n com.atvbreak/.ActionReceiver
  */
 public class ActionReceiver extends BroadcastReceiver {
 
@@ -67,8 +70,34 @@ public class ActionReceiver extends BroadcastReceiver {
                 break;
             case WatchTimerService.ACTION_RELOAD:
                 WatchTimerService.reschedule(context);
+                WatchTimerService.scheduleDaily(context);
                 WatchTimerService.send(context, WatchTimerService.ACTION_RELOAD);
                 break;
+            case WatchTimerService.ACTION_DAILY_REMIND:
+                // 每日累计闹钟到点
+                WatchTimerService.handleDailyRemind(context);
+                break;
+            case WatchTimerService.ACTION_TEST_DAILY_MASK:
+                // 验收用：立即弹一次全屏 mask，不写已提醒标记、不改变累计
+                AppConfig dailyCfg = AppConfig.load(context);
+                DailyMaskOverlay.show(context, dailyCfg, DailyWatchStats.todayTotalMs(context));
+                WatchTimerService.scheduleTick(context);
+                break;
+            case WatchTimerService.ACTION_DAILY_ROLL_DAY: {
+                // 调试用：--es day yyyy-MM-dd 注入「当前墙钟」，验证跨天切分
+                String day = intent.getStringExtra("day");
+                java.text.SimpleDateFormat f =
+                        new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US);
+                try {
+                    java.util.Date d = day == null ? new java.util.Date()
+                            : f.parse(day + " 12:00");
+                    DailyWatchStats.rollDay(context, d.getTime());
+                    WatchTimerService.scheduleDaily(context);
+                } catch (Exception e) {
+                    Log.w(TAG, "跨天调试参数无效：" + day, e);
+                }
+                break;
+            }
             case WatchTimerService.ACTION_START:
                 WatchTimerService.start(context);
                 break;

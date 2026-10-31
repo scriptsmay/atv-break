@@ -72,4 +72,42 @@
 
     <string name="config_file_path">配置文件：%1$s</string>
     <string name="tip_remote">遥控器操作：方向键移动焦点，确认键选中；改文案建议用手机/电脑编辑上面的配置文件后点「从文件导入」。</string>
+
+    <!-- ===== 设置页 tab ===== -->
+    <string name="tab_overview">总览</string>
+    <string name="tab_continuous">连续提醒</string>
+    <string name="tab_daily">每日累计</string>
+    <string name="notice_master_off">主开关已关闭，此处设置暂不生效</string>
+    <string name="notice_daily_off">每日提醒已关闭，下方配置暂不生效</string>
+    <string name="action_reset_continuous">重置连续计时</string>
+
+    <!-- ===== 每日累计（设置页 tab 3 与状态卡） ===== -->
+    <string name="label_daily_enabled">启用每日提醒</string>
+    <string name="label_daily_threshold">每日上限（分钟）</string>
+    <string name="label_daily_mask">全屏时长（秒）</string>
+    <string name="label_daily_repeat">重复间隔（分钟）</string>
+    <string name="label_daily_today">今日累计</string>
+    <string name="label_daily_today_row">今日累计</string>
+    <string name="label_daily_limit">上限 %1$s · 昨日 %2$s</string>
+    <string name="label_daily_yesterday_none">—</string>
+    <string name="label_daily_status">今日累计</string>
+    <string name="daily_status_compact">今日累计 %1$s / %2$s</string>
+    <string name="daily_status_over">已超上限 · 今日 %1$s</string>
+    <string name="daily_status_over_foreground">已超上限 · 打开应用期间不弹提醒</string>
+    <string name="preset_daily_1h">1 小时</string>
+    <string name="preset_daily_2h">2 小时</string>
+    <string name="preset_daily_3h">3 小时</string>
+    <string name="preset_mask_30">30 秒</string>
+    <string name="preset_mask_60">60 秒</string>
+    <string name="preset_mask_90">90 秒</string>
+    <string name="preset_repeat_none">不重复</string>
+    <string name="preset_repeat_30">30 分</string>
+    <string name="preset_repeat_60">60 分</string>
+    <string name="action_test_daily_mask">测试全屏提醒</string>
+
+    <!-- ===== 每日全屏 mask ===== -->
+    <string name="daily_mask_title">今天已经看电视 {duration}啦</string>
+    <string name="daily_mask_message">建议关机休息一会儿，看看远方、去户外走走～</string>
+    <string name="daily_mask_countdown">%1$d 秒后自动关闭</string>
+    <string name="daily_mask_footer">打开「定时休息提醒」应用可关闭每日提醒</string>
 </resources>

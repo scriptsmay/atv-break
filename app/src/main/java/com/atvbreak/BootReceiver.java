@@ -57,6 +57,7 @@ public class BootReceiver extends BroadcastReceiver {
             WatchTimerService.reconcile(context);
             WatchTimerService.start(context);
             WatchTimerService.reschedule(context);
+            WatchTimerService.scheduleDaily(context);
         }
     }
 }

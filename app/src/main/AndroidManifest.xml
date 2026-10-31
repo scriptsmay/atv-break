@@ -66,6 +66,9 @@
                 <action android:name="com.atvbreak.action.RELOAD_CONFIG" />
                 <action android:name="com.atvbreak.action.START" />
                 <action android:name="com.atvbreak.action.TICK" />
+                <action android:name="com.atvbreak.action.DAILY_REMIND" />
+                <action android:name="com.atvbreak.action.TEST_DAILY_MASK" />
+                <action android:name="com.atvbreak.action.DAILY_ROLL_DAY" />
             </intent-filter>
         </receiver>
 

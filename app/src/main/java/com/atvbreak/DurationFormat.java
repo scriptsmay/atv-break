@@ -45,4 +45,14 @@ public final class DurationFormat {
         }
         return String.format(Locale.CHINA, "%d 小时 %d 分", hours, rest);
     }
+
+    /**
+     * 渲染标题模板：把 {@code {duration}} 替换为格式化后的时长。
+     * 模板为空（或全空白）时回落到默认标题。
+     */
+    public static String renderTitleTemplate(String template, String duration) {
+        String t = template == null || template.trim().isEmpty()
+                ? AppConfig.DEFAULT_DAILY_TITLE : template;
+        return t.replace("{duration}", duration == null ? "" : duration);
+    }
 }

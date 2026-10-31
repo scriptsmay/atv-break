@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  每日全屏提醒 mask：铺满全屏、不可聚焦、不可触摸，固定时长后自动关闭。
+  根布局 5% overscan 安全边距，所有内容限制在安全区内（电视普遍存在过扫描）。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_daily_mask"
+    android:focusable="false"
+    android:focusableInTouchMode="false">
+
+    <!-- 5% 安全边距由 DailyMaskOverlay 按实际窗口尺寸以像素设置（FrameLayout 不支持百分比 margin） -->
+    <LinearLayout
+        android:id="@+id/daily_mask_safe"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:background="@drawable/bg_daily_mask_eye"
+            android:contentDescription="@string/app_name"
+            android:padding="22dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_eye" />
+
+        <TextView
+            android:id="@+id/daily_mask_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:gravity="center"
+            android:letterSpacing="0.01"
+            android:textColor="@color/text_primary"
+            android:textSize="40sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/daily_mask_message"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:gravity="center"
+            android:lineSpacingExtra="8dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="22sp" />
+
+        <TextView
+            android:id="@+id/daily_mask_countdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="36dp"
+            android:background="@drawable/bg_daily_mask_pill"
+            android:textColor="@color/accent"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <ProgressBar
+            android:id="@+id/daily_mask_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="360dp"
+            android:layout_height="6dp"
+            android:layout_marginTop="14dp"
+            android:max="1000"
+            android:progressDrawable="@drawable/bg_daily_mask_progress" />
+    </LinearLayout>
+
+    <!-- 底部出口说明：必须带「打开应用」这个动作，从 TV 桌面找应用对老人不直观 -->
+    <TextView
+        android:id="@+id/daily_mask_footer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:gravity="center"
+        android:text="@string/daily_mask_footer"
+        android:textColor="@color/text_secondary"
+        android:textSize="18sp" />
+
+</FrameLayout>

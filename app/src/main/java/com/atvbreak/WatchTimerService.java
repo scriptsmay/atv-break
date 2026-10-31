@@ -58,14 +58,24 @@ public class WatchTimerService extends Service {
     public static final String ACTION_TEST = "com.atvbreak.action.TEST_REMINDER";
     public static final String ACTION_RESET = "com.atvbreak.action.RESET_TIMER";
     public static final String ACTION_RELOAD = "com.atvbreak.action.RELOAD_CONFIG";
+    /** 每日累计线到点（与连续提醒的 REMIND 语义与生命周期都不同，独立动作/请求码）。 */
+    public static final String ACTION_DAILY_REMIND = "com.atvbreak.action.DAILY_REMIND";
+    /** 验收用：立即弹一次全屏 mask（不写已提醒标记、不改变累计）。 */
+    public static final String ACTION_TEST_DAILY_MASK = "com.atvbreak.action.TEST_DAILY_MASK";
+    /** 调试用：注入墙钟，验证跨天切分。 */
+    public static final String ACTION_DAILY_ROLL_DAY = "com.atvbreak.action.DAILY_ROLL_DAY";
 
     private static final String CHANNEL_ID = "atv_break_timer";
     private static final int NOTIF_ID = 1;
     private static final int REQ_REMIND = 1001;
     private static final int REQ_TICK = 1003;
+    private static final int REQ_DAILY_REMIND = 1004;
 
     /** 看门狗周期：15 分钟。开销接近零，只做一次状态对账。 */
     static final long TICK_INTERVAL_MS = 15L * 60L * 1000L;
+
+    /** DAILY 到点但未能展示（前台 / 息屏 / 权限缺失）时的重试间隔。 */
+    static final long DAILY_RETRY_MS = 60_000L;
 
     private static final String ST_ACC = "st_accumulated_ms";
     private static final String ST_ON_SINCE = "st_screen_on_since";
@@ -126,11 +136,14 @@ public class WatchTimerService extends Service {
             resetTimer();
         } else if (ACTION_REMIND.equals(action)) {
             handleRemind(this);
+        } else if (ACTION_DAILY_REMIND.equals(action)) {
+            handleDailyRemind(this);
         } else if (ACTION_TICK.equals(action)) {
             handleTick(this);
         } else {
             // ACTION_START / ACTION_RELOAD / 系统重启服务：按状态继续计时
             reschedule(this);
+            scheduleDaily(this);
         }
         return START_STICKY;
     }
@@ -260,8 +273,10 @@ public class WatchTimerService extends Service {
             screenOnSince = now;
         }
         persistState();
+        DailyWatchStats.onScreenOn(this);
         beat(this);
         reschedule(this);
+        scheduleDaily(this);
     }
 
     private void onScreenOff() {
@@ -272,9 +287,12 @@ public class WatchTimerService extends Service {
         }
         screenOffMark = now;
         persistState();
+        DailyWatchStats.onScreenOff(this);
         ReminderOverlay.dismiss(this);
+        DailyMaskOverlay.dismiss(this);
         // 注意：这里不取消闹钟。息屏期间改挂不唤醒设备的闹钟，亮屏后由系统补投。
         reschedule(this);
+        scheduleDaily(this);
         Log.i(TAG, "息屏，暂停计时；已累计 " + (watchingMs() / 60000) + " 分钟");
     }
 
@@ -390,6 +408,10 @@ public class WatchTimerService extends Service {
         return pi(c, ACTION_TICK, REQ_TICK);
     }
 
+    static PendingIntent dailyPendingIntent(Context c) {
+        return pi(c, ACTION_DAILY_REMIND, REQ_DAILY_REMIND);
+    }
+
     static void cancelAlarm(Context c) {
         AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
         if (am != null) {
@@ -408,6 +430,8 @@ public class WatchTimerService extends Service {
         am.cancel(pi);
         if (!cfg.enabled()) {
             Log.i(TAG, "提醒已关闭，不设定提醒闹钟");
+            // 主开关是总闸门：每日线一并停掉，并收起可能正在显示的全屏 mask
+            stopDaily(c);
             scheduleTick(c);
             return false;
         }
@@ -475,6 +499,8 @@ public class WatchTimerService extends Service {
         } else {
             reschedule(c);
         }
+        // 每日线同样在看门狗里自愈：进程被杀 / 闹钟丢失后重新排上
+        scheduleDaily(c);
         // 服务不在了就拉起来，让亮/熄屏事件重新有人处理
         long age = heartbeatAgeMs(c);
         if (age < 0 || age > TICK_INTERVAL_MS * 2L) {
@@ -507,14 +533,176 @@ public class WatchTimerService extends Service {
         fireReminder(c);
     }
 
-    /** 展示浮层并开启下一轮计时。 */
+    /**
+     * 展示浮层并开启下一轮计时。
+     *
+     * 提醒仲裁：全屏 mask 显示期间不叠小浮层、不叠第二路提示音，只把连续计时清零
+     * （视为已提醒）——mask 已经完成了「让用户看一眼」的目的，再补一个小浮层属于重复打扰。
+     */
     static void fireReminder(Context c) {
+        if (DailyMaskOverlay.isShowing()) {
+            Log.i(TAG, "全屏提醒正在显示，本次连续提醒只清零不弹层");
+            resetPersisted(c);
+            reschedule(c);
+            return;
+        }
         AppConfig cfg = AppConfig.load(c);
         ReminderOverlay.show(c, cfg);
         Log.i(TAG, "触发提醒：" + cfg.message());
         // 提醒后开启新一轮计时；真正休息（息屏）超过阈值同样会清零
         resetPersisted(c);
         reschedule(c);
+    }
+
+    // ---------- 每日累计线：调度 ----------
+
+    /** 取消 DAILY 闹钟。 */
+    static void cancelDaily(Context c) {
+        AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
+        if (am != null) {
+            am.cancel(dailyPendingIntent(c));
+        }
+    }
+
+    /**
+     * 按当前状态排下一次 DAILY 闹钟。
+     *
+     * 三个候选触发点取最早：① 距阈值的剩余时长；② 距零点（到点后 roll 清零并重排，
+     * 天然完成跨天切换，不需要额外的零点闹钟）；③ 上次弹出 + 重复间隔。
+     * 算出的触发点若已早于当前 elapsedRealtime（闹钟丢失、休眠恢复、进程被杀期间跨过），
+     * 不再排到过去，而是立即触发一次。
+     */
+    static void scheduleDaily(Context c) {
+        scheduleDaily(c, true);
+    }
+
+    /**
+     * @param allowImmediate false 时即使触发点已到也至少推迟 {@link #DAILY_RETRY_MS}，
+     *                       避免「到点 → 处理 → 再排 → 又到点」的自旋
+     */
+    static void scheduleDaily(Context c, boolean allowImmediate) {
+        AppConfig cfg = AppConfig.load(c);
+        AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) {
+            return;
+        }
+        PendingIntent pi = dailyPendingIntent(c);
+        am.cancel(pi);
+
+        if (!cfg.dailyActive()) {
+            Log.i(TAG, "每日提醒未启用，取消 DAILY 闹钟并收起全屏提醒");
+            DailyMaskOverlay.dismiss(c);
+            return;
+        }
+
+        long nowElapsed = SystemClock.elapsedRealtime();
+        long nowWall = System.currentTimeMillis();
+        long total = DailyWatchStats.todayTotalMs(c);
+        long remainToThreshold = cfg.dailyThresholdMillis() - total;
+        long untilMidnight = Math.max(0L, DailyWatchStats.midnightWall(nowWall) + 86_400_000L - nowWall);
+
+        long delay;
+        if (remainToThreshold > 0L) {
+            // 未到阈值：阈值剩余与零点取早者
+            delay = Math.min(remainToThreshold, untilMidnight);
+        } else if (!DailyWatchStats.firedToday(c)) {
+            // 已超阈值但今天还没弹过：立即触发
+            delay = 0L;
+        } else if (cfg.dailyRepeatMillis() > 0L) {
+            // 已弹过且允许重复：以「上次弹出时刻」为基准，避免误差累积
+            long last = DailyWatchStats.lastFiredElapsed(c);
+            if (last < 0L) {
+                delay = 0L;
+            } else {
+                delay = last + cfg.dailyRepeatMillis() - nowElapsed;
+                // 重复间隔已过（例如刚息屏再亮屏）：立即补弹，而不是排到过去
+                if (delay < 0L) {
+                    delay = 0L;
+                }
+                // 不跨过零点：到零点先结算
+                delay = Math.min(delay, untilMidnight);
+            }
+        } else {
+            // 不重复：次日零点再排
+            delay = untilMidnight;
+        }
+
+        if (delay <= 0L && allowImmediate) {
+            Log.i(TAG, "DAILY 触发点已到，立即处理");
+            handleDailyRemind(c);
+            return;
+        }
+        if (delay <= 0L) {
+            delay = DAILY_RETRY_MS;
+        }
+
+        long triggerAt = nowElapsed + delay;
+        try {
+            if (isInteractive(c)) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    am.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, pi);
+                } else {
+                    am.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, pi);
+                }
+            } else {
+                // 息屏：不唤醒设备，等下次唤醒（通常是亮屏）时补投
+                am.setWindow(AlarmManager.ELAPSED_REALTIME, triggerAt, 60_000L, pi);
+            }
+        } catch (SecurityException e) {
+            am.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, pi);
+        }
+        Log.i(TAG, "已设定每日提醒：" + (delay / 60000) + " 分 " + ((delay / 1000) % 60) + " 秒后");
+    }
+
+    /**
+     * DAILY 闹钟到点：结算跨天 → 校验开关 → 校验阈值 → 防重复 → 前台判定 → 弹 mask。
+     *
+     * 只有 {@link DailyMaskOverlay#show} 确认成功后才写 {@code daily_fired_day}；
+     * 未授予悬浮窗权限导致展示失败时不得写，否则用户当天再也收不到提醒。
+     */
+    static void handleDailyRemind(Context c) {
+        AppConfig cfg = AppConfig.load(c);
+        if (!cfg.dailyActive()) {
+            Log.i(TAG, "每日提醒已关闭，忽略本次到点");
+            cancelDaily(c);
+            return;
+        }
+        long total = DailyWatchStats.todayTotalMs(c);
+        if (total < cfg.dailyThresholdMillis()) {
+            scheduleDaily(c, false);
+            return;
+        }
+        if (DailyWatchStats.firedToday(c)) {
+            // 已弹过：交给 scheduleDaily 按重复间隔排下一次
+            scheduleDaily(c, false);
+            return;
+        }
+        if (MainActivity.isInForeground()) {
+            Log.i(TAG, "应用在前台，不弹全屏提醒（状态卡改为橙色提示）");
+            scheduleDaily(c, false);
+            return;
+        }
+        if (!isInteractive(c)) {
+            Log.i(TAG, "到点但当前息屏，改挂亮屏后补投");
+            scheduleDaily(c, false);
+            return;
+        }
+        if (DailyMaskOverlay.show(c, cfg, total)) {
+            DailyWatchStats.markFired(c);
+            Log.i(TAG, "每日提醒已弹出，今日累计 " + (total / 60000L) + " 分钟");
+            // 按重复间隔排下一次
+            scheduleDaily(c, false);
+        } else {
+            Log.w(TAG, "全屏提醒展示失败，不写已提醒标记，稍后重试");
+            // 未展示成功：不要等到下一个重复间隔，尽快重试
+            scheduleDaily(c, false);
+        }
+    }
+
+    /** 关闭开关时调用：取消闹钟并收起正在显示的全屏 mask。 */
+    static void stopDaily(Context c) {
+        cancelDaily(c);
+        DailyMaskOverlay.dismiss(c);
     }
 
     // ---------- 广播注册 ----------

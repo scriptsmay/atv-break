@@ -47,6 +47,13 @@ public class MainActivity extends Activity {
 
     private static final String TAG = "AtvBreak.Main";
 
+    /** 进程内前台标志：应用在前台时不弹全屏 mask，改为状态卡橙色提示。 */
+    private static volatile boolean inForeground;
+
+    public static boolean isInForeground() {
+        return inForeground;
+    }
+
     private EditText etMessage;
     private EditText etThreshold;
     private EditText etDismiss;
@@ -395,6 +402,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        inForeground = true;
+        // 用户正在操作设置页时不希望被全屏遮住
+        DailyMaskOverlay.dismiss(this);
         AppConfig cfg = AppConfig.load(this);
         if (!etMessage.isFocused()) {
             fill(cfg);
@@ -406,8 +416,11 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onPause() {
+        inForeground = false;
         uiHandler.removeCallbacks(statusTask);
         super.onPause();
+        // 退出应用后若已超限且今天还没弹过，立刻补一次（不等下一个闹钟）
+        WatchTimerService.scheduleDaily(this);
     }
 
     /** 让 EditText 在遥控器下可编辑（不弹出软键盘、不影响方向键导航）。 */

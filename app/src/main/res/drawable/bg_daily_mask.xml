@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 全屏 mask 背景：#FA0B0C10（98% 不透明）铺满，中心一层极淡 accent 径向光晕。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#FA0B0C10" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:centerX="0.5"
+                android:centerY="0.44"
+                android:gradientRadius="45%"
+                android:type="radial"
+                android:startColor="#1A4DA3FF"
+                android:endColor="#00000000" />
+        </shape>
+    </item>
+</layer-list>
