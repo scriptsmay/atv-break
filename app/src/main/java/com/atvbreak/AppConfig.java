@@ -60,7 +60,7 @@ public final class AppConfig {
     public static final String DEFAULT_DAILY_MESSAGE = "建议关机休息一会儿，看看远方、去户外走走～";
 
     /** 数值范围（越界一律钳制，不抛异常）。 */
-    public static final int DAILY_THRESHOLD_MIN = 10;
+    public static final int DAILY_THRESHOLD_MIN = 1;
     public static final int DAILY_THRESHOLD_MAX = 1440;
     public static final int DAILY_MASK_SECONDS_MIN = 10;
     public static final int DAILY_MASK_SECONDS_MAX = 180;

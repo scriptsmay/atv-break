@@ -160,7 +160,7 @@ adb logcat -s AtvBreak.Boot AtvBreak.Service
 | `soundEnabled` | true | 浮层弹出时是否播放提示音 |
 | `soundStream` | `notification` | 提示音音量通道：`notification`（通知音量，像短信）或 `alarm`（闹钟音量，更不容易漏听） |
 | `dailyEnabled` | true | 每日提醒开关（主开关关闭时一并停用） |
-| `dailyThresholdMinutes` | 120 | 每日累计上限（分钟），范围 10–1440，越界钳制 |
+| `dailyThresholdMinutes` | 120 | 每日累计上限（分钟），范围 1–1440，越界钳制 |
 | `dailyMaskSeconds` | 60 | 全屏提醒停留时长（秒），范围 10–180 |
 | `dailyRepeatMinutes` | 30 | 超限后重复间隔（分钟），范围 0–240，`0` 表示当天只提醒一次 |
 | `dailyTitle` | 见上 | 全屏提醒标题模板，支持 `{duration}` 占位符；**仅配置文件可改** |

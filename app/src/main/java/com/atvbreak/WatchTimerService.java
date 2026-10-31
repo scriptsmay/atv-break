@@ -672,8 +672,9 @@ public class WatchTimerService extends Service {
             scheduleDaily(c, false);
             return;
         }
-        if (DailyWatchStats.firedToday(c)) {
-            // 已弹过：交给 scheduleDaily 按重复间隔排下一次
+        // 「今天已弹过」不等于「今天不再弹」：超限后还要按重复间隔再弹
+        if (!DailyWatchStats.shouldFireNow(DailyWatchStats.firedToday(c), cfg.dailyRepeatMillis(),
+                SystemClock.elapsedRealtime(), DailyWatchStats.lastFiredElapsed(c))) {
             scheduleDaily(c, false);
             return;
         }

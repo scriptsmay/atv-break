@@ -59,11 +59,13 @@ public class AppConfigParseTest {
     }
 
     @Test
-    public void dailyThresholdClampedTo10_1440() {
-        assertEquals(10, parse("{\"dailyThresholdMinutes\":1}").dailyThresholdMinutes());
+    public void dailyThresholdClampedTo1_1440() {
+        // 下界 1 分钟：验收需要「2 分钟阈值」快速验证，10 分钟下界会把 2 钳成 10
+        assertEquals(1, parse("{\"dailyThresholdMinutes\":1}").dailyThresholdMinutes());
+        assertEquals(2, parse("{\"dailyThresholdMinutes\":2}").dailyThresholdMinutes());
         assertEquals(1440, parse("{\"dailyThresholdMinutes\":99999}").dailyThresholdMinutes());
-        assertEquals(10, parse("{\"dailyThresholdMinutes\":0}").dailyThresholdMinutes());
-        assertEquals(10, parse("{\"dailyThresholdMinutes\":-5}").dailyThresholdMinutes());
+        assertEquals(1, parse("{\"dailyThresholdMinutes\":0}").dailyThresholdMinutes());
+        assertEquals(1, parse("{\"dailyThresholdMinutes\":-5}").dailyThresholdMinutes());
     }
 
     @Test

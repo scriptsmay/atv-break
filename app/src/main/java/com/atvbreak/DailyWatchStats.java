@@ -336,12 +336,23 @@ public final class DailyWatchStats {
         return Math.max(0L, total);
     }
 
-    /** 调试用：注入墙钟，强制走一次跨天结算（验证午夜切分，不必真等到 00:00）。 */
+    /**
+     * 调试用：注入墙钟，强制走一次跨天结算（验证午夜切分，不必真等到 00:00）。
+     *
+     * 注入后必须把「当前亮屏段」重置为真实时刻：否则段起点会停在注入的那个墙钟上，
+     * 下一次真实跨天结算会把「注入时刻到现在」整段当成今天的量，凭空多算几个小时。
+     */
     public static void rollDay(Context c, long nowWall) {
         long nowElapsed = android.os.SystemClock.elapsedRealtime();
+        long realWall = System.currentTimeMillis();
         State s = load(c);
         Map<String, Long> history = loadHistory(c);
         Roll r = rollDayIfNeeded(s, nowElapsed, nowWall, history);
+        // 把亮屏段重新锚到真实时刻，避免调试注入污染后续累计
+        if (s.onSinceElapsed >= 0) {
+            s.onSinceElapsed = nowElapsed;
+            s.onSinceWall = realWall;
+        }
         save(c, s);
         saveHistory(c, history);
         if (r.rolled) {
@@ -433,6 +444,34 @@ public final class DailyWatchStats {
     /** 上次弹 mask 的 elapsedRealtime；-1 表示从未弹过（或已不可用）。 */
     public static long lastFiredElapsed(Context c) {
         return prefs(c).getLong(K_FIRED_AT_ELAPSED, -1L);
+    }
+
+    /**
+     * 到点处理时是否应该真的弹出。
+     *
+     * 「今天已弹过」不等于「今天不再弹」——超限后还要按重复间隔再弹。因此这里区分：
+     * - 今天没弹过 → 弹；
+     * - 弹过但重复间隔为 0（当天只提醒一次）→ 不弹；
+     * - 弹过且距上次弹出已满一个重复间隔 → 弹；
+     * - 弹过但间隔还没到（闹钟早到 / 手动触发）→ 不弹，等排定的时间点。
+     *
+     * @param firedToday        今天是否已成功弹过
+     * @param repeatMs          重复间隔毫秒，0 表示不重复
+     * @param nowElapsed        当前 elapsedRealtime
+     * @param lastFiredElapsed  上次弹出的 elapsedRealtime，-1 表示无记录
+     */
+    public static boolean shouldFireNow(boolean firedToday, long repeatMs,
+                                        long nowElapsed, long lastFiredElapsed) {
+        if (!firedToday) {
+            return true;
+        }
+        if (repeatMs <= 0L) {
+            return false;
+        }
+        if (lastFiredElapsed < 0L) {
+            return false;
+        }
+        return nowElapsed - lastFiredElapsed >= repeatMs;
     }
 
     // ---------- 历史查询 ----------

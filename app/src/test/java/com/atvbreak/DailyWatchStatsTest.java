@@ -196,6 +196,39 @@ public class DailyWatchStatsTest {
         assertEquals(wall(2026, 10, 31, 0, 0), midnight);
     }
 
+    // ---------- 重复提醒判定 ----------
+
+    @Test
+    public void neverFiredTodayFiresNow() {
+        assertTrue(DailyWatchStats.shouldFireNow(false, 30L * MIN, 1_000_000L, -1L));
+    }
+
+    @Test
+    public void repeatZeroMeansOncePerDay() {
+        assertFalse(DailyWatchStats.shouldFireNow(true, 0L, 1_000_000L, 1L));
+    }
+
+    @Test
+    public void repeatDueFiresAgain() {
+        long last = 1_000_000L;
+        assertTrue("满 30 分钟应再弹",
+                DailyWatchStats.shouldFireNow(true, 30L * MIN, last + 30L * MIN, last));
+        assertTrue("超过间隔也应再弹",
+                DailyWatchStats.shouldFireNow(true, 30L * MIN, last + 45L * MIN, last));
+    }
+
+    @Test
+    public void repeatNotYetDueDoesNotFire() {
+        long last = 1_000_000L;
+        assertFalse("间隔未到不应重复打扰",
+                DailyWatchStats.shouldFireNow(true, 30L * MIN, last + 29L * MIN, last));
+    }
+
+    @Test
+    public void firedTodayWithoutTimestampDoesNotFire() {
+        assertFalse(DailyWatchStats.shouldFireNow(true, 30L * MIN, 1_000_000L, -1L));
+    }
+
     @Test
     public void clockJumpBackwardsNeverYieldsNegativeCarry() {
         DailyWatchStats.State s = freshState();
