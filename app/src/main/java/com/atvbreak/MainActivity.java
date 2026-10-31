@@ -55,9 +55,9 @@ public class MainActivity extends Activity {
         return inForeground;
     }
 
-    private static final int TAB_OVERVIEW = 0;
-    private static final int TAB_CONTINUOUS = 1;
-    private static final int TAB_DAILY = 2;
+    static final int TAB_OVERVIEW = 0;
+    static final int TAB_CONTINUOUS = 1;
+    static final int TAB_DAILY = 2;
 
     private int currentTab = TAB_OVERVIEW;
 
@@ -342,8 +342,12 @@ public class MainActivity extends Activity {
     /**
      * 焦点目标必须按「当前页」动态设置。
      *
-     * 写死 id 会指向隐藏页里的控件：GONE 的视图不参与焦点搜索，显式 id 却仍会被解析，
-     * 结果按上键落到一个看不见的控件上——没有高亮，像是遥控器失灵。
+     * 写死 id 会指向隐藏页里的控件：GONE 的视图不参与几何焦点搜索，显式 id 却仍会被解析，
+     * 结果按方向键落到一个看不见的控件上——没有高亮，像是遥控器失灵。
+     *
+     * 同理，tab 栏的「下键」也必须统一指向**当前页**的首项，而不是各 tab 自己的页面：
+     * 焦点可以停在非当前页的 tab 上（左右移动即可），但下方只显示当前页，
+     * 按自己的页面找会跳进 GONE 页面的控件。
      */
     private void applyFocusTargets() {
         View first = pages[currentTab].findViewById(firstFocusIdOf(currentTab));
@@ -354,8 +358,9 @@ public class MainActivity extends Activity {
         if (last != null) {
             last.setNextFocusDownId(R.id.btn_save);
         }
+        int[] downTargets = tabDownTargets(currentTab);
         for (int i = 0; i < tabs.length; i++) {
-            tabs[i].setNextFocusDownId(firstFocusIdOf(i));
+            tabs[i].setNextFocusDownId(downTargets[i]);
         }
         // 底部常驻栏的「上键」回到当前页最后一项
         for (int id : new int[]{R.id.btn_save, R.id.btn_import, R.id.btn_export}) {
@@ -364,6 +369,17 @@ public class MainActivity extends Activity {
                 v.setNextFocusUpId(lastFocusIdOf(currentTab));
             }
         }
+    }
+
+    /**
+     * 三个 tab 的「下键」目标，按当前页决定（纯函数，便于单测）。
+     *
+     * 返回值与 {@code tabs[]} 同序：无论焦点停在哪个 tab 上，按「下」都进入当前页首项，
+     * 因为下方只显示当前页——指向各 tab 自己的页面会跳进 GONE 控件。
+     */
+    static int[] tabDownTargets(int currentTab) {
+        int first = firstFocusIdOf(currentTab);
+        return new int[]{first, first, first};
     }
 
     private static int firstFocusIdOf(int tab) {
