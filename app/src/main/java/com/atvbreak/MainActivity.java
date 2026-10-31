@@ -35,6 +35,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -54,6 +55,12 @@ public class MainActivity extends Activity {
         return inForeground;
     }
 
+    private static final int TAB_OVERVIEW = 0;
+    private static final int TAB_CONTINUOUS = 1;
+    private static final int TAB_DAILY = 2;
+
+    private int currentTab = TAB_OVERVIEW;
+
     private EditText etMessage;
     private EditText etThreshold;
     private EditText etDismiss;
@@ -69,11 +76,31 @@ public class MainActivity extends Activity {
     private View dotDaemon;
     private View dotBoot;
     private View dotBattery;
+    private View dotDaily;
     private TextView tvPermission;
     private TextView tvDaemon;
     private TextView tvBoot;
     private TextView tvBattery;
+    private TextView tvDailyRow;
     private TextView tvFilePath;
+
+    // 每日累计
+    private CheckBox cbDailyEnabled;
+    private EditText etDailyThreshold;
+    private EditText etDailyMask;
+    private EditText etDailyRepeat;
+    private TextView tvDailyTotal;
+    private TextView tvDailySub;
+    private ProgressBar barDaily;
+    private View groupDailyConfig;
+    private View noticeContinuousOff;
+    private View noticeDailyMasterOff;
+    private View noticeDailyOff;
+    private final Button[] dailyConfigButtons = new Button[9];
+    private final Button[] continuousConfigButtons = new Button[7];
+
+    private View[] tabs;
+    private View[] pages;
 
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private final Runnable statusTask = new Runnable() {
@@ -108,7 +135,32 @@ public class MainActivity extends Activity {
         tvDaemon = findViewById(R.id.tv_daemon);
         tvBoot = findViewById(R.id.tv_boot);
         tvBattery = findViewById(R.id.tv_battery);
+        tvDailyRow = findViewById(R.id.tv_daily_row);
+        dotDaily = findViewById(R.id.dot_daily);
         tvFilePath = findViewById(R.id.tv_file_path);
+
+        cbDailyEnabled = findViewById(R.id.cb_daily_enabled);
+        etDailyThreshold = findViewById(R.id.et_daily_threshold);
+        etDailyMask = findViewById(R.id.et_daily_mask);
+        etDailyRepeat = findViewById(R.id.et_daily_repeat);
+        tvDailyTotal = findViewById(R.id.tv_daily_total);
+        tvDailySub = findViewById(R.id.tv_daily_sub);
+        barDaily = findViewById(R.id.bar_daily);
+        groupDailyConfig = findViewById(R.id.group_daily_config);
+        noticeContinuousOff = findViewById(R.id.notice_continuous_off);
+        noticeDailyMasterOff = findViewById(R.id.notice_daily_master_off);
+        noticeDailyOff = findViewById(R.id.notice_daily_off);
+
+        // tab 栏与三个页面（切换只改 visibility，不重建视图）
+        tabs = new View[]{findViewById(R.id.tab_overview), findViewById(R.id.tab_continuous),
+                findViewById(R.id.tab_daily)};
+        pages = new View[]{findViewById(R.id.page_overview), findViewById(R.id.page_continuous),
+                findViewById(R.id.page_daily)};
+        for (int i = 0; i < tabs.length; i++) {
+            final int index = i;
+            tabs[i].setOnClickListener(v -> switchTab(index));
+            tabs[i].setOnFocusChangeListener(focusHighlightListener);
+        }
 
         AppConfig cfg = AppConfig.fromPrefsOnly(this);
         etMessage.setText(cfg.message());
@@ -118,7 +170,15 @@ public class MainActivity extends Activity {
         cbEnabled.setChecked(cfg.enabled());
         cbSound.setChecked(cfg.soundEnabled());
         cbSoundAlarm.setChecked(cfg.useAlarmStream());
+        cbDailyEnabled.setChecked(cfg.dailyEnabled());
+        etDailyThreshold.setText(String.valueOf(cfg.dailyThresholdMinutes()));
+        etDailyMask.setText(String.valueOf(cfg.dailyMaskSeconds()));
+        etDailyRepeat.setText(String.valueOf(cfg.dailyRepeatMinutes()));
         tvFilePath.setText(getString(R.string.config_file_path, AppConfig.configFile(this).getAbsolutePath()));
+
+        // 主开关变化后立即刷新置灰态（不必等下一次每秒刷新）
+        cbEnabled.setOnClickListener(v -> refreshEnabledStates());
+        cbDailyEnabled.setOnClickListener(v -> refreshEnabledStates());
 
         Button btnSave = findViewById(R.id.btn_save);
         btnSave.setOnClickListener(this::onSave);
@@ -180,15 +240,62 @@ public class MainActivity extends Activity {
             onSave(v);
         });
 
-        for (View b : new View[]{btnSave, btnReset, btnImport, btnExport, btnPermission, btnBattery,
-                findViewById(R.id.btn_preset_30), findViewById(R.id.btn_preset_45),
-                findViewById(R.id.btn_preset_60), findViewById(R.id.btn_dismiss_15),
-                findViewById(R.id.btn_dismiss_30), findViewById(R.id.btn_dismiss_60),
-                findViewById(R.id.chip_reset_never),
-                cbEnabled, cbSound, cbSoundAlarm}) {
+        // ---------- 每日累计 ----------
+        bindDailyThresholdPreset(R.id.btn_daily_1h, 60);
+        bindDailyThresholdPreset(R.id.btn_daily_2h, 120);
+        bindDailyThresholdPreset(R.id.btn_daily_3h, 180);
+        bindDailyMaskPreset(R.id.btn_daily_mask_30, 30);
+        bindDailyMaskPreset(R.id.btn_daily_mask_60, 60);
+        bindDailyMaskPreset(R.id.btn_daily_mask_90, 90);
+        bindDailyRepeatPreset(R.id.btn_daily_repeat_none, 0);
+        bindDailyRepeatPreset(R.id.btn_daily_repeat_30, 30);
+        bindDailyRepeatPreset(R.id.btn_daily_repeat_60, 60);
+
+        Button btnDailyTest = findViewById(R.id.btn_daily_test);
+        btnDailyTest.setOnClickListener(v -> {
+            AppConfig c = AppConfig.load(this);
+            if (!ReminderOverlay.canDrawOverlays(this)) {
+                toast(getString(R.string.toast_need_overlay_permission));
+                return;
+            }
+            // 验收用：立即弹一次，不写已提醒标记、不改变累计
+            DailyMaskOverlay.show(this, c, DailyWatchStats.todayTotalMs(this));
+        });
+
+        continuousConfigButtons[0] = findViewById(R.id.btn_preset_30);
+        continuousConfigButtons[1] = findViewById(R.id.btn_preset_45);
+        continuousConfigButtons[2] = findViewById(R.id.btn_preset_60);
+        continuousConfigButtons[3] = findViewById(R.id.btn_dismiss_15);
+        continuousConfigButtons[4] = findViewById(R.id.btn_dismiss_30);
+        continuousConfigButtons[5] = findViewById(R.id.btn_dismiss_60);
+        continuousConfigButtons[6] = findViewById(R.id.chip_reset_never);
+
+        dailyConfigButtons[0] = findViewById(R.id.btn_daily_1h);
+        dailyConfigButtons[1] = findViewById(R.id.btn_daily_2h);
+        dailyConfigButtons[2] = findViewById(R.id.btn_daily_3h);
+        dailyConfigButtons[3] = findViewById(R.id.btn_daily_mask_30);
+        dailyConfigButtons[4] = findViewById(R.id.btn_daily_mask_60);
+        dailyConfigButtons[5] = findViewById(R.id.btn_daily_mask_90);
+        dailyConfigButtons[6] = findViewById(R.id.btn_daily_repeat_none);
+        dailyConfigButtons[7] = findViewById(R.id.btn_daily_repeat_30);
+        dailyConfigButtons[8] = findViewById(R.id.btn_daily_repeat_60);
+
+        View[] focusables = new View[]{btnSave, btnReset, btnImport, btnExport, btnPermission,
+                btnBattery, btnTest, btnDailyTest, cbEnabled, cbSound, cbSoundAlarm, cbDailyEnabled,
+                etMessage, etThreshold, etDismiss, etResetOff,
+                etDailyThreshold, etDailyMask, etDailyRepeat};
+        for (View b : focusables) {
+            b.setOnFocusChangeListener(focusHighlightListener);
+        }
+        for (View b : continuousConfigButtons) {
+            b.setOnFocusChangeListener(focusHighlightListener);
+        }
+        for (View b : dailyConfigButtons) {
             b.setOnFocusChangeListener(focusHighlightListener);
         }
 
+        switchTab(TAB_OVERVIEW);
+        refreshEnabledStates();
         WatchTimerService.start(this);
     }
 
@@ -197,6 +304,71 @@ public class MainActivity extends Activity {
         v.animate().scaleX(scale).scaleY(scale).setDuration(120).start();
         v.setSelected(hasFocus);
     };
+
+    // ---------- tab 切换与置灰联动 ----------
+
+    /**
+     * 切换 tab：只改 visibility，不重建视图。
+     *
+     * GONE 的页面自动被 Android 焦点搜索跳过，遥控器不可能把焦点移进隐藏 tab；
+     * EditText 中未保存的编辑也天然保留。
+     */
+    private void switchTab(int index) {
+        if (index < 0 || index >= pages.length) {
+            return;
+        }
+        currentTab = index;
+        for (int i = 0; i < pages.length; i++) {
+            pages[i].setVisibility(i == index ? View.VISIBLE : View.GONE);
+            tabs[i].setActivated(i == index);
+        }
+        refreshEnabledStates();
+    }
+
+    /**
+     * 主开关跨 tab 的隐式依赖必须显式化：不置灰的话，用户在 tab 1 关了主开关，
+     * 切到 tab 2 / tab 3 改完保存后毫无效果，而且看不到原因。
+     */
+    private void refreshEnabledStates() {
+        boolean masterOn = cbEnabled.isChecked();
+        boolean dailyOn = cbDailyEnabled.isChecked();
+
+        // tab 2：主开关关闭时全部配置控件置灰
+        setGroupEnabled(continuousConfigButtons, masterOn);
+        etMessage.setEnabled(masterOn);
+        etThreshold.setEnabled(masterOn);
+        etDismiss.setEnabled(masterOn);
+        etResetOff.setEnabled(masterOn);
+        findViewById(R.id.btn_test).setEnabled(masterOn);
+        findViewById(R.id.btn_reset).setEnabled(masterOn);
+        noticeContinuousOff.setVisibility(masterOn ? View.GONE : View.VISIBLE);
+
+        // tab 3：主开关关闭时整页配置置灰；每日开关关闭时四个配置项与测试按钮置灰
+        cbDailyEnabled.setEnabled(masterOn);
+        setGroupEnabled(dailyConfigButtons, masterOn && dailyOn);
+        etDailyThreshold.setEnabled(masterOn && dailyOn);
+        etDailyMask.setEnabled(masterOn && dailyOn);
+        etDailyRepeat.setEnabled(masterOn && dailyOn);
+        findViewById(R.id.btn_daily_test).setEnabled(masterOn && dailyOn);
+        noticeDailyMasterOff.setVisibility(masterOn ? View.GONE : View.VISIBLE);
+        noticeDailyOff.setVisibility(!masterOn || dailyOn ? View.GONE : View.VISIBLE);
+
+        // 置灰时整组降透明度，视觉上明确「暂不生效」
+        float alpha = masterOn ? 1f : 0.5f;
+        findViewById(R.id.group_continuous).setAlpha(alpha);
+        groupDailyConfig.setAlpha(masterOn && dailyOn ? 1f : 0.5f);
+        cbDailyEnabled.setAlpha(masterOn ? 1f : 0.5f);
+
+        updateChips();
+    }
+
+    private static void setGroupEnabled(View[] views, boolean enabled) {
+        for (View v : views) {
+            if (v != null) {
+                v.setEnabled(enabled);
+            }
+        }
+    }
 
     private void onSave(View v) {
         AppConfig cfg = AppConfig.fromPrefsOnly(this);
@@ -210,10 +382,25 @@ public class MainActivity extends Activity {
         cfg.soundEnabled = cbSound.isChecked();
         cfg.soundStream = cbSoundAlarm.isChecked()
                 ? AppConfig.SOUND_STREAM_ALARM : AppConfig.SOUND_STREAM_NOTIFICATION;
+        // 每日累计：越界一律钳制到范围内（与配置文件解析同口径）
+        cfg.dailyEnabled = cbDailyEnabled.isChecked();
+        cfg.dailyThresholdMinutes = AppConfig.clamp(intOf(etDailyThreshold,
+                        AppConfig.DEFAULT_DAILY_THRESHOLD_MINUTES),
+                AppConfig.DAILY_THRESHOLD_MIN, AppConfig.DAILY_THRESHOLD_MAX);
+        cfg.dailyMaskSeconds = AppConfig.clamp(intOf(etDailyMask,
+                        AppConfig.DEFAULT_DAILY_MASK_SECONDS),
+                AppConfig.DAILY_MASK_SECONDS_MIN, AppConfig.DAILY_MASK_SECONDS_MAX);
+        cfg.dailyRepeatMinutes = AppConfig.clamp(intOfAllowZero(etDailyRepeat,
+                        AppConfig.DEFAULT_DAILY_REPEAT_MINUTES),
+                AppConfig.DAILY_REPEAT_MINUTES_MIN, AppConfig.DAILY_REPEAT_MINUTES_MAX);
         cfg.save(this);
         AppConfig.exportToFile(this, cfg);
         WatchTimerService.send(this, WatchTimerService.ACTION_RELOAD);
         toast(getString(R.string.toast_saved));
+        // 回填钳制后的值，让用户看到真正生效的数字
+        etDailyThreshold.setText(String.valueOf(cfg.dailyThresholdMinutes()));
+        etDailyMask.setText(String.valueOf(cfg.dailyMaskSeconds()));
+        etDailyRepeat.setText(String.valueOf(cfg.dailyRepeatMinutes()));
         refreshStatus();
     }
 
@@ -230,6 +417,30 @@ public class MainActivity extends Activity {
         Button b = findViewById(id);
         b.setOnClickListener(v -> {
             etDismiss.setText(String.valueOf(seconds));
+            onSave(v);
+        });
+    }
+
+    private void bindDailyThresholdPreset(int id, int minutes) {
+        Button b = findViewById(id);
+        b.setOnClickListener(v -> {
+            etDailyThreshold.setText(String.valueOf(minutes));
+            onSave(v);
+        });
+    }
+
+    private void bindDailyMaskPreset(int id, int seconds) {
+        Button b = findViewById(id);
+        b.setOnClickListener(v -> {
+            etDailyMask.setText(String.valueOf(seconds));
+            onSave(v);
+        });
+    }
+
+    private void bindDailyRepeatPreset(int id, int minutes) {
+        Button b = findViewById(id);
+        b.setOnClickListener(v -> {
+            etDailyRepeat.setText(String.valueOf(minutes));
             onSave(v);
         });
     }
@@ -266,6 +477,21 @@ public class MainActivity extends Activity {
         setActivated(R.id.btn_dismiss_60, dismiss == 60);
 
         setActivated(R.id.chip_reset_never, intOfAllowZero(etResetOff, -1) == 0);
+
+        int dailyThreshold = intOf(etDailyThreshold, 0);
+        setActivated(R.id.btn_daily_1h, dailyThreshold == 60);
+        setActivated(R.id.btn_daily_2h, dailyThreshold == 120);
+        setActivated(R.id.btn_daily_3h, dailyThreshold == 180);
+
+        int maskSeconds = intOf(etDailyMask, 0);
+        setActivated(R.id.btn_daily_mask_30, maskSeconds == 30);
+        setActivated(R.id.btn_daily_mask_60, maskSeconds == 60);
+        setActivated(R.id.btn_daily_mask_90, maskSeconds == 90);
+
+        int repeat = intOfAllowZero(etDailyRepeat, -1);
+        setActivated(R.id.btn_daily_repeat_none, repeat == 0);
+        setActivated(R.id.btn_daily_repeat_30, repeat == 30);
+        setActivated(R.id.btn_daily_repeat_60, repeat == 60);
     }
 
     private void setActivated(int id, boolean on) {
@@ -289,6 +515,11 @@ public class MainActivity extends Activity {
         cbEnabled.setChecked(cfg.enabled());
         cbSound.setChecked(cfg.soundEnabled());
         cbSoundAlarm.setChecked(cfg.useAlarmStream());
+        cbDailyEnabled.setChecked(cfg.dailyEnabled());
+        etDailyThreshold.setText(String.valueOf(cfg.dailyThresholdMinutes()));
+        etDailyMask.setText(String.valueOf(cfg.dailyMaskSeconds()));
+        etDailyRepeat.setText(String.valueOf(cfg.dailyRepeatMinutes()));
+        refreshEnabledStates();
     }
 
     private void refreshStatus() {
@@ -308,6 +539,7 @@ public class MainActivity extends Activity {
                 ? getString(R.string.next_remind_format, remain / 60000, (remain / 1000) % 60)
                 : getString(R.string.next_remind_off));
         updateChips();
+        refreshDailyStatus(cfg);
 
         boolean granted = ReminderOverlay.canDrawOverlays(this);
         tvPermission.setText(granted ? getString(R.string.permission_granted)
@@ -355,6 +587,50 @@ public class MainActivity extends Activity {
         tvBattery.setTextColor(ignoring ? ok : warn);
         tintDot(dotBattery, ignoring ? ok : warn);
         findViewById(R.id.btn_battery).setVisibility(ignoring ? View.GONE : View.VISIBLE);
+    }
+
+    /**
+     * 每日累计：tab 1 紧凑行与 tab 3 大数字同源（{@link DailyWatchStats#todayTotalMs}），
+     * 每秒刷新一次。同一时刻只有一个 tab 可见，不存在同屏两个刷新数字。
+     */
+    private void refreshDailyStatus(AppConfig cfg) {
+        long today = DailyWatchStats.todayTotalMs(this);
+        long limit = cfg.dailyThresholdMillis();
+        boolean over = today >= limit;
+        int warn = getResources().getColor(R.color.warn);
+        int ok = getResources().getColor(R.color.ok);
+
+        // tab 1 紧凑行
+        String rowText;
+        if (!cfg.dailyActive()) {
+            rowText = getString(R.string.status_off);
+            tintDot(dotDaily, getResources().getColor(R.color.text_secondary));
+        } else if (!over) {
+            rowText = getString(R.string.daily_status_compact,
+                    DurationFormat.formatDuration(today), DurationFormat.formatDuration(limit));
+            tintDot(dotDaily, ok);
+        } else if (isInForeground()) {
+            rowText = getString(R.string.daily_status_over_foreground);
+            tintDot(dotDaily, warn);
+        } else {
+            rowText = getString(R.string.daily_status_over, DurationFormat.formatDuration(today));
+            tintDot(dotDaily, warn);
+        }
+        tvDailyRow.setText(rowText);
+        tvDailyRow.setTextColor(over && cfg.dailyActive() ? warn : getResources().getColor(R.color.text_secondary));
+
+        // tab 3 大数字 + 进度条 + 昨日
+        tvDailyTotal.setText(DurationFormat.formatDuration(today));
+        tvDailyTotal.setTextColor(over ? warn : getResources().getColor(R.color.text_primary));
+        int progress = limit <= 0 ? 1000 : (int) Math.min(1000L, today * 1000L / limit);
+        barDaily.setProgress(progress);
+
+        long yesterday = DailyWatchStats.yesterdayMs(this);
+        String yesterdayText = yesterday < 0L
+                ? getString(R.string.label_daily_yesterday_none)
+                : DurationFormat.formatDuration(yesterday);
+        tvDailySub.setText(getString(R.string.label_daily_limit,
+                DurationFormat.formatDuration(limit), yesterdayText));
     }
 
     private boolean isIgnoringBatteryOptimization() {

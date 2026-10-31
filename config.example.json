@@ -6,5 +6,11 @@
   "marginDp": 40,
   "enabled": true,
   "soundEnabled": true,
-  "soundStream": "notification"
+  "soundStream": "notification",
+  "dailyEnabled": true,
+  "dailyThresholdMinutes": 120,
+  "dailyMaskSeconds": 60,
+  "dailyRepeatMinutes": 30,
+  "dailyTitle": "今天已经看电视 {duration}啦",
+  "dailyMessage": "建议关机休息一会儿，看看远方、去户外走走～"
 }

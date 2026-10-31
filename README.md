@@ -2,12 +2,15 @@
 
 [![Build APK](https://github.com/scriptsmay/atv-break/actions/workflows/build-apk.yml/badge.svg)](https://github.com/scriptsmay/atv-break/actions/workflows/build-apk.yml)
 
-电视盒子 APK：统计「连续观看时长」，到点后在屏幕**右下角**弹出浮层提醒，10 秒自动消失，全程不需要遥控器操作。
+电视盒子 APK：两条计时线，分别解决「一口气看太久」和「断断续续看了一整天」。
 
+- **连续提醒**：连续亮屏到阈值（默认 **45 分钟**）在屏幕**右下角**弹浮层，10 秒自动消失；
+- **每日累计**：当日累计亮屏到上限（默认 **2 小时**）弹**全屏 mask**，60 秒自动关闭，默认每 30 分钟重复一次；
 - 包名：`com.atvbreak`
-- 默认阈值：连续亮屏 **45 分钟** 触发；浮层显示 **10 秒** 后自动关闭
-- 默认文案：`你已经连续观看45分钟，建议休息15分钟后再继续看电视哦。`
-- 提示音：浮层弹出时同时播放一段内置提示音（类似收到短信），默认开启；音量通道可选「通知音量」或「闹钟音量」
+- 默认文案（连续）：`你已经连续观看45分钟，建议休息15分钟后再继续看电视哦。`
+- 默认文案（每日）：标题 `今天已经看电视 {duration}啦` + 正文 `建议关机休息一会儿，看看远方、去户外走走～`
+- 提示音：两种提醒弹出时都播放内置提示音（类似收到短信），默认开启；音量通道可选「通知音量」或「闹钟音量」
+- 每日累计**按日持久化**（`daily_history`，保留 365 天），为后续统计曲线预留数据基础
 - 依赖：零第三方库，只用 Android 框架 API
 - 兼容：`minSdk 21`（Android 5.0+）→ `targetSdk 34`，leanback 非强制（有 TV 桌面走 LEANBACK_LAUNCHER，没有也能装）
 
@@ -30,6 +33,19 @@
 
 计时口径：**只累计亮屏时长**。息屏超过 `resetAfterScreenOffMinutes`（默认 10 分钟）视为已经休息，计时清零；触发一次提醒后开始新一轮计时。
 
+两条线的状态完全隔离、互不干扰：
+
+| 维度 | 连续提醒 | 每日累计 |
+|---|---|---|
+| 开关 | `enabled` | `enabled && dailyEnabled` |
+| 计时口径 | 连续亮屏 | 当日累计亮屏 |
+| 清零条件 | 触发提醒 / 息屏超 10 分钟 | 跨 00:00 |
+| 默认阈值 | 45 分钟 | 120 分钟 |
+| 触发后 | 清零开新一轮 | 保留累计，按间隔重复 |
+| 展示 | 右下角小浮层 10 秒 | 全屏 mask 60 秒（应用前台时不弹） |
+
+每日累计受主开关「启用定时提醒」**总闸门控**：主开关关闭时两条线一起停。
+
 ### 后台常驻与自愈
 
 提醒链路**不依赖常驻进程**，分三层兜底：
@@ -44,7 +60,7 @@
 # ① 加入电池优化白名单（install.bat 已自动做；也可在应用设置页点「加入电池优化白名单」）
 adb shell dumpsys deviceidle whitelist +com.atvbreak
 
-# ② 验证闹钟已挂载（应看到 REMIND 与 TICK 两条）
+# ② 验证闹钟已挂载（应看到 REMIND / TICK / DAILY 三条）
 adb shell dumpsys alarm | findstr atvbreak
 ```
 
@@ -92,9 +108,13 @@ adb logcat -s AtvBreak.Boot AtvBreak.Service
 
 打开应用 → 方向键移动焦点、确认键选中：
 
-- 提醒文案 / 触发阈值（分钟）/ 自动关闭（秒）/ 息屏多久清零（分钟）/ 启用开关 / 提示音开关与音量通道
-- 快捷按钮：`30 分钟` `45 分钟` `60 分钟` 一键设阈值；`15 秒` `30 秒` `1 分钟` 一键设浮层自动关闭时长
-- `保存并应用`、`立即测试浮层`、`重置计时`、`从文件导入`、`导出到文件`
+设置页分三个 tab（遥控器左右切换），底部「保存并应用 / 从文件导入 / 导出到文件」常驻，任意 tab 下都能保存：
+
+- **总览**：计时环、权限 / 守护 / 开机 / 电池四项状态、今日累计紧凑行、三个总闸门开关、两个维护按钮
+- **连续提醒**：提醒文案、触发阈值、自动关闭、息屏多久清零、`立即测试浮层`、`重置连续计时`
+- **每日累计**：今日累计大数字 + 进度条 + 昨日、启用每日提醒、每日上限、全屏时长、重复间隔、`测试全屏提醒`
+
+主开关关闭时 tab 2 / tab 3 全部置灰并提示「主开关已关闭，此处设置暂不生效」；每日开关关闭时 tab 3 的配置项置灰。
 
 界面上改文案需要输入法，TV 上比较麻烦 → 长文案走下面的配置文件。
 
@@ -117,7 +137,13 @@ adb logcat -s AtvBreak.Boot AtvBreak.Service
   "marginDp": 40,
   "enabled": true,
   "soundEnabled": true,
-  "soundStream": "notification"
+  "soundStream": "notification",
+  "dailyEnabled": true,
+  "dailyThresholdMinutes": 120,
+  "dailyMaskSeconds": 60,
+  "dailyRepeatMinutes": 30,
+  "dailyTitle": "今天已经看电视 {duration}啦",
+  "dailyMessage": "建议关机休息一会儿，看看远方、去户外走走～"
 }
 ```
 
@@ -133,6 +159,14 @@ adb logcat -s AtvBreak.Boot AtvBreak.Service
 | `enabled` | true | 总开关 |
 | `soundEnabled` | true | 浮层弹出时是否播放提示音 |
 | `soundStream` | `notification` | 提示音音量通道：`notification`（通知音量，像短信）或 `alarm`（闹钟音量，更不容易漏听） |
+| `dailyEnabled` | true | 每日提醒开关（主开关关闭时一并停用） |
+| `dailyThresholdMinutes` | 120 | 每日累计上限（分钟），范围 10–1440，越界钳制 |
+| `dailyMaskSeconds` | 60 | 全屏提醒停留时长（秒），范围 10–180 |
+| `dailyRepeatMinutes` | 30 | 超限后重复间隔（分钟），范围 0–240，`0` 表示当天只提醒一次 |
+| `dailyTitle` | 见上 | 全屏提醒标题模板，支持 `{duration}` 占位符；**仅配置文件可改** |
+| `dailyMessage` | 见上 | 全屏提醒正文；**仅配置文件可改** |
+
+> `dailyTitle` / `dailyMessage` 不提供设置页输入框——mask 文案不像小浮层文案那样需要频繁修改。
 
 生效方式三选一：① 点界面上的「从文件导入」；② 发广播 `adb shell am broadcast -a com.atvbreak.action.RELOAD_CONFIG -n com.atvbreak/.ActionReceiver`；③ 重启应用 / 重启盒子（文件比上次应用的时间新就会被自动加载）。
 
@@ -244,7 +278,38 @@ adb shell am broadcast -a com.atvbreak.action.RESET_TIMER    -n com.atvbreak/.Ac
 # 4）抗清理测试：强杀进程，应在 1 秒内被 START_STICKY 拉起，且到点提醒不丢（需 root）
 adb shell "su -c 'kill -9 $(pidof com.atvbreak)'"
 adb logcat -s AtvBreak.Service AtvBreak.Action | grep -E "has died|Scheduling restart|触发提醒"
+
+# 5）每日全屏提醒立即测试（不写已提醒标记、不改变累计）
+adb shell am broadcast -a com.atvbreak.action.TEST_DAILY_MASK -n com.atvbreak/.ActionReceiver
+
+# 6）跨天切分测试（debug：注入当前墙钟，不必真等到午夜）
+adb shell am broadcast -a com.atvbreak.action.DAILY_ROLL_DAY --es day 2026-10-30     -n com.atvbreak/.ActionReceiver
+
+# 7）核对三条闹钟（REMIND / TICK / DAILY）
+adb shell dumpsys alarm | grep atvbreak
+
+# 8）读取当日累计、历史与已提醒标记（debug 包）
+adb shell run-as com.atvbreak cat shared_prefs/atv_break.xml
+
+# 9）快速验证：把每日上限改成 2 分钟、全屏 15 秒、每 1 分钟重复
+adb shell "run-as com.atvbreak sh -c 'cat > files/config.json'" <<'EOF'
+{"dailyThresholdMinutes":2,"dailyMaskSeconds":15,"dailyRepeatMinutes":1}
+EOF
+adb shell am broadcast -a com.atvbreak.action.RELOAD_CONFIG -n com.atvbreak/.ActionReceiver
 ```
+
+每日线的验收要点：
+
+- 阈值设 2 分钟：累计亮屏到点后 5 秒内弹全屏 mask，到时长自动消失，提示音可闻；
+- 重复间隔设 0 后当天不再弹；设 30 分钟后按间隔再弹；
+- 应用内关闭「每日提醒」：当前 mask 立即收起、后续不再弹、`dumpsys alarm` 中 DAILY 消失；
+- 关闭主开关：DAILY 闹钟同样消失，两条线一起停；
+- 息屏期间不累计、不弹出；息屏到点后亮屏能补弹；
+- 跨天切分：23:40 亮屏、00:30 息屏 → 今日 30 分钟、昨日 20 分钟；
+- 连续两天未开机后打开，昨日显示 `—`（不是 0，也不是几天前的数）；
+- 历史落盘：跨天后 `daily_history` 中前一日数值与界面一致；息屏后当日值已写入；
+- 应用在前台时不弹 mask，tab 1 状态点变橙；退出应用后能补弹；
+- 提醒仲裁：连续提醒与 mask 同时成立时只出现 mask、只有一路提示音。
 
 实测基线（Android 11 / API 30、1080p 盒子）：安装、设置页遥控器导航、浮层右下角弹出与自动关闭、1 分钟阈值按点触发（误差秒级）、配置文件热导入、`deviceidle whitelist` 生效、REMIND + TICK 双闹钟挂载、强杀后自重启且提醒不丢；浮层在全屏视频播放器（如 SmartTube）之上正常显示。
 
@@ -276,13 +341,22 @@ adb logcat -s AtvBreak.Service AtvBreak.Action | grep -E "has died|Scheduling re
 ```
 app/src/main/java/com/atvbreak/
 ├── AppConfig.java        配置：默认值 + SharedPreferences + JSON 文件导入导出（内/外两处）
-├── MainActivity.java     TV 设置界面（遥控器可操作：左状态 / 右设置 双栏卡片）
+├── MainActivity.java     TV 设置界面（遥控器可操作：三 tab + 常驻底部操作栏）
 ├── TimerRingView.java    状态卡环形进度（自绘 View，连续观看时长 / 阈值）
+├── DurationFormat.java   时长格式化（设置页与全屏 mask 共用）
+├── DailyWatchStats.java  每日累计状态机 + 按日落盘（daily_history，保留 365 天）
 ├── WatchTimerService.java 计时前台服务（事件驱动 + AlarmManager + 15 分钟看门狗自愈）
-├── ActionReceiver.java   指令入口（系统到点提醒 / adb 调试广播）
+├── ActionReceiver.java   指令入口（系统到点提醒 / 每日到点 / adb 调试广播）
 ├── ReminderOverlay.java  右下角浮层（自动关闭，弹出时按配置播放提示音）
+├── DailyMaskOverlay.java 每日累计全屏 mask（不可聚焦、自动关闭、5% overscan 边距）
 ├── ReminderSound.java    提示音播放（内置 res/raw/reminder_chime.ogg，可选通知/闹钟音量通道）
 └── BootReceiver.java     开机 / 解锁 / 快速开机 / 升级后拉起服务（并记录自启时间）
+```
+
+本地单元测试（`app/src/test/java/`，不进 APK）：
+
+```bash
+./gradlew testDebugUnitTest
 ```
 
 脚本：
@@ -302,6 +376,11 @@ app/src/main/java/com/atvbreak/
 - 进程死亡期间的亮屏时长无法精确补计（看门狗策略偏保守：宁可少算不乱算），最坏情况是某次提醒晚几分钟。
 - 部分盒子 ROM 的遥控器电源键长按是**完整关机**而非待机：正在计的这一轮会被清零，网络 adb 也一并掉线（容易被误判成「没弹」）。下次开机 `BootReceiver` 会重新拉起并重新计时，所以「开机后 45 分钟提醒」这一层不受影响。
 - 未做正式签名与多渠道配置——面向局域网内 adb 自装，release 构建直接复用 debug 签名；要上应用市场需自行配置签名与 leanback 声明。
+- **全屏 mask 不抢焦点**：`FLAG_NOT_FOCUSABLE` 的代价是遥控器按键仍会传给底层应用，用户切台 / 换应用 / 按主页键即可绕过。mask 是视觉阻断，不构成强制拦截。
+- **两条线都只认亮屏**：暂停播放但屏幕亮着的时间同样计入。要按「实际播放」统计需要 `UsageStatsManager` 特殊权限，收益低，未做。
+- **DRM 播放器兼容性**：部分 DRM 内容（`isSecure=true`）可能反盖 overlay 或导致降级，自用场景影响小。
+- **数据保留**：每日累计按日保存在 `atv_break` prefs 的 `daily_history` 中，保留 365 天（稳态约 8 KB），随 `allowBackup=true` 一并备份。
+- **重启口径**：重启瞬间的亮屏段不补计（与连续计时一致），当日累计保留。
 
 ## 八、许可
 
