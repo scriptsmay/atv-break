@@ -126,6 +126,8 @@ public class WatchTimerService extends Service {
                 onScreenOn();
             } else if (Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) {
                 onScreenOff();
+            } else if (Intent.ACTION_SHUTDOWN.equals(intent.getAction())) {
+                onShutdown(context);
             }
         }
     };
@@ -296,6 +298,25 @@ public class WatchTimerService extends Service {
         beat(this);
         reschedule(this);
         scheduleDaily(this);
+    }
+
+
+    /** 系统关机钩子：在系统停机前将当前连续观看与每日观看时长安全结转并持久化。 */
+    static void onShutdown(Context c) {
+        long now = SystemClock.elapsedRealtime();
+        SharedPreferences p = AppConfig.prefs(c);
+        long acc = p.getLong(ST_ACC, 0L);
+        long onSince = p.getLong(ST_ON_SINCE, -1L);
+        if (onSince >= 0) {
+            acc += Math.max(0L, now - onSince);
+            p.edit()
+                    .putLong(ST_ACC, acc)
+                    .putLong(ST_ON_SINCE, -1L)
+                    .putLong(ST_OFF_MARK, now)
+                    .apply();
+        }
+        DailyWatchStats.onShutdown(c);
+        Log.i(TAG, "WatchTimerService 收到关机，已完成状态落盘");
     }
 
     private void onScreenOff() {
@@ -743,6 +764,7 @@ public class WatchTimerService extends Service {
         IntentFilter f = new IntentFilter();
         f.addAction(Intent.ACTION_SCREEN_ON);
         f.addAction(Intent.ACTION_SCREEN_OFF);
+        f.addAction(Intent.ACTION_SHUTDOWN);
         registerReceiver(screenReceiver, f);
         receiverRegistered = true;
     }

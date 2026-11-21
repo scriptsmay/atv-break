@@ -42,6 +42,12 @@ public class BootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent == null ? null : intent.getAction();
+        if (Intent.ACTION_SHUTDOWN.equals(action)
+                || "android.intent.action.QUICKBOOT_POWEROFF".equals(action)) {
+            Log.i(TAG, "收到关机广播 " + action + "，结转并保存观看时长");
+            WatchTimerService.onShutdown(context);
+            return;
+        }
         if (Intent.ACTION_BOOT_COMPLETED.equals(action)
                 || Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(action)
                 || Intent.ACTION_USER_UNLOCKED.equals(action)

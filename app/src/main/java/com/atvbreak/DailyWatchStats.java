@@ -146,6 +146,28 @@ public final class DailyWatchStats {
         return r;
     }
 
+
+    /**
+     * 亮屏期间增量 Checkpoint（纯逻辑，供 reconcile 与单元测试调用）：
+     * 把 [onSinceElapsed, nowElapsed] 的时长累加到 accMs，并将段起点推进到当前时刻。
+     * 保证 totalOf(s, nowElapsed) 严格不变的同时，使未结算时长持久化。
+     */
+    public static void checkpointScreenOn(State s, long nowElapsed, long nowWall,
+                                          Map<String, Long> history) {
+        if (s.onSinceElapsed >= 0) {
+            long delta = Math.max(0L, nowElapsed - s.onSinceElapsed);
+            s.accMs += delta;
+            s.onSinceElapsed = nowElapsed;
+            s.onSinceWall = nowWall;
+        } else {
+            s.onSinceElapsed = nowElapsed;
+            s.onSinceWall = nowWall;
+        }
+        if (s.day != null && history != null) {
+            history.put(s.day, s.accMs);
+        }
+    }
+
     /** 淘汰早于「今天 - 365 天」的条目。 */
     public static void pruneHistory(Map<String, Long> history, String todayKey) {
         Calendar limit = calendarOf(todayKey);
@@ -302,6 +324,30 @@ public final class DailyWatchStats {
      * 不加第一步会出错：23:40 亮屏、00:30 息屏且期间无事件时，直接累加会把整段
      * 写进「今天」，随后下一次 roll 又整体结转成上一日——今日少算、上一日多算。
      */
+
+    /**
+     * 系统关机事件钩子：在断电前将当前段时长安全落盘。
+     */
+    public static void onShutdown(Context c) {
+        long nowElapsed = android.os.SystemClock.elapsedRealtime();
+        long nowWall = System.currentTimeMillis();
+        State s = load(c);
+        Map<String, Long> history = loadHistory(c);
+        Roll r = rollDayIfNeeded(s, nowElapsed, nowWall, history);
+        if (s.onSinceElapsed >= 0) {
+            s.accMs += Math.max(0L, nowElapsed - s.onSinceElapsed);
+            s.onSinceElapsed = -1L;
+            s.onSinceWall = -1L;
+        }
+        save(c, s);
+        history.put(s.day, s.accMs);
+        saveHistory(c, history);
+        if (r.rolled) {
+            Log.i(TAG, "关机跨天结算：" + r.prevDay + " 共 " + (r.prevTotal / 60000L) + " 分钟");
+        }
+        Log.i(TAG, "系统关机，已落盘当日累计 " + (s.accMs / 60000L) + " 分钟");
+    }
+
     public static void onScreenOff(Context c) {
         long nowElapsed = android.os.SystemClock.elapsedRealtime();
         long nowWall = System.currentTimeMillis();
@@ -401,15 +447,14 @@ public final class DailyWatchStats {
         Roll r = rollDayIfNeeded(s, nowElapsed, nowWall, history);
         boolean on = WatchTimerService.isInteractive(c);
         if (on) {
-            if (s.onSinceElapsed < 0) {
-                // 进程死期间的亮屏时长无法确认，从现在重新开始计
-                s.onSinceElapsed = nowElapsed;
-                s.onSinceWall = nowWall;
-            }
+            checkpointScreenOn(s, nowElapsed, nowWall, history);
+            saveHistory(c, history);
         } else if (s.onSinceElapsed >= 0) {
             s.accMs += Math.max(0L, nowElapsed - s.onSinceElapsed);
             s.onSinceElapsed = -1L;
             s.onSinceWall = -1L;
+            history.put(s.day, s.accMs);
+            saveHistory(c, history);
         }
         save(c, s);
         if (r.rolled) {

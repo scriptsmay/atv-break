@@ -275,4 +275,70 @@ public class DailyWatchStatsTest {
         assertTrue("上一日不能出现负数", r.prevTotal >= 10L * MIN);
         assertTrue("今日不能出现负数", s.accMs >= 0L);
     }
+
+    // ---------- 亮屏期间增量 Checkpoint ----------
+
+    @Test
+    public void checkpointScreenOnAccumulatesDeltaAndAdvancesStart() {
+        DailyWatchStats.State s = freshState();
+        Map<String, Long> h = history();
+        s.day = "2026-11-20";
+        s.accMs = 0L;
+        s.onSinceElapsed = 10_000L;
+        s.onSinceWall = wall(2026, 11, 20, 16, 0);
+
+        long nowElapsed = 10_000L + 15L * MIN;
+        long nowWall = wall(2026, 11, 20, 16, 15);
+
+        // 执行 checkpoint
+        DailyWatchStats.checkpointScreenOn(s, nowElapsed, nowWall, h);
+
+        assertEquals("已累计时长应增至 15 分钟", 15L * MIN, s.accMs);
+        assertEquals("段起点应推进到当前 elapsed", nowElapsed, s.onSinceElapsed);
+        assertEquals("段起点墙钟应推进到当前时刻", nowWall, s.onSinceWall);
+        assertEquals("历史表当日记录应同步为 15 分钟", Long.valueOf(15L * MIN), h.get("2026-11-20"));
+        assertEquals("总有效时长严格不变", 15L * MIN, totalOf(s, nowElapsed));
+
+        // 再过 15 分钟
+        nowElapsed += 15L * MIN;
+        nowWall += 15L * MIN;
+        DailyWatchStats.checkpointScreenOn(s, nowElapsed, nowWall, h);
+
+        assertEquals("已累计时长应增至 30 分钟", 30L * MIN, s.accMs);
+        assertEquals(nowElapsed, s.onSinceElapsed);
+        assertEquals(Long.valueOf(30L * MIN), h.get("2026-11-20"));
+        assertEquals("总有效时长依然是 30 分钟", 30L * MIN, totalOf(s, nowElapsed));
+    }
+
+    @Test
+    public void shutdownOrPowerLossAfterCheckpointRetainsDurationOnNextDay() {
+        DailyWatchStats.State s = freshState();
+        Map<String, Long> h = history();
+        s.day = "2026-11-20";
+        s.accMs = 0L;
+        s.onSinceElapsed = 10_000L;
+        s.onSinceWall = wall(2026, 11, 20, 16, 0);
+
+        // 亮屏观看了 2 小时，期间定期 checkpoint
+        long nowElapsed = 10_000L + 2L * HOUR;
+        long nowWall = wall(2026, 11, 20, 18, 0);
+        DailyWatchStats.checkpointScreenOn(s, nowElapsed, nowWall, h);
+
+        assertEquals(2L * HOUR, s.accMs);
+
+        // 模拟关机 / 掉电 / 开机：段起点失效置为 -1
+        s.onSinceElapsed = -1L;
+        s.onSinceWall = -1L;
+
+        // 次日开机结算
+        DailyWatchStats.Roll r = DailyWatchStats.rollDayIfNeeded(
+                s, 5_000L, wall(2026, 11, 21, 9, 0), h);
+
+        assertTrue(r.rolled);
+        assertEquals("2026-11-20", r.prevDay);
+        assertEquals("昨日累计时长必须保留 checkpoint 的 2 小时，不能归零", 2L * HOUR, r.prevTotal);
+        assertEquals(Long.valueOf(2L * HOUR), h.get("2026-11-20"));
+        assertEquals("今日重新归零", 0L, s.accMs);
+        assertEquals("2026-11-21", s.day);
+    }
 }
