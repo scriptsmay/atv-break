@@ -424,6 +424,22 @@ public final class DailyWatchStats {
     }
 
     /**
+     * 开机时连续计时线的累计值处理：真重启清零，应用升级保留。
+     *
+     * 连续线（45 分钟线）的 {@code ST_ACC} 跨重启不能保留——{@code elapsedRealtime}
+     * 归零后，残留的累计值会让倒计时从昨天的余额继续，开机不到一个完整周期就弹提醒。
+     * 应用升级（MY_PACKAGE_REPLACED）不是重启，时钟连续，必须原样保留。
+     */
+    public static long accumulatedAfterBoot(long carry, boolean realBoot) {
+        return realBoot ? 0L : Math.max(0L, carry);
+    }
+
+    /** 开机不触碰每日累计线（2 小时线由跨天结算负责，段起点单独失效）。 */
+    public static long dailyAccAfterBootReset(long dailyAcc) {
+        return Math.max(0L, dailyAcc);
+    }
+
+    /**
      * 开机后显式失效：{@code elapsedRealtime} 从 0 重新开始，持久化的段起点会变成
      * 「未来时刻」。仅靠数值比较不可靠（保存值若早于重启后已过的时间，会凭空多算），
      * 因此直接清空段起点；当日累计保留，重启瞬间的亮屏段不补计。

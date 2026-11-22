@@ -341,4 +341,40 @@ public class DailyWatchStatsTest {
         assertEquals("今日重新归零", 0L, s.accMs);
         assertEquals("2026-11-21", s.day);
     }
+
+    // ---------- 开机清理连续计时残留 ----------
+
+    /**
+     * 开机后连续线的剩余时长 = 阈值 - (开机残留累计 + 今日已观看)。
+     * 回归：残留累计必须被清零，否则 45 分钟倒计时从昨天的余额继续，开机不到 45 分钟就弹。
+     */
+    @Test
+    public void bootResetLeavesFullThresholdForContinuousTimer() {
+        long threshold = 45L * MIN;
+        long yesterdayCarry = 42L * MIN;   // 昨天关机前留在 ST_ACC 的余额
+        long watchedSinceBoot = 3L * MIN;  // 今天开机后已观看
+
+        // 修复前：remaining = threshold - (carry + watched) = 0 → 立即弹
+        long buggyRemaining = threshold - (yesterdayCarry + watchedSinceBoot);
+        assertEquals(0L, buggyRemaining);
+
+        // 修复后：开机清零 carry，remaining 只扣今日观看
+        long carryAfterBoot = DailyWatchStats.accumulatedAfterBoot(yesterdayCarry, true);
+        assertEquals(0L, carryAfterBoot);
+        assertEquals(42L * MIN, threshold - (carryAfterBoot + watchedSinceBoot));
+    }
+
+    @Test
+    public void nonBootUpgradeKeepsContinuousAccumulator() {
+        // 应用升级（MY_PACKAGE_REPLACED）不是重启，时钟连续，累计必须保留
+        long carry = 42L * MIN;
+        assertEquals(carry, DailyWatchStats.accumulatedAfterBoot(carry, false));
+    }
+
+    @Test
+    public void bootResetLeavesDailyAccumulatorUntouched() {
+        // 每日累计线（2 小时线）跨天独立结算，重启时不能顺手清掉
+        long dailyAcc = 30L * MIN;
+        assertEquals(dailyAcc, DailyWatchStats.dailyAccAfterBootReset(dailyAcc));
+    }
 }

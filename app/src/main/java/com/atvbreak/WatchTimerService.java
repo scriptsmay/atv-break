@@ -272,10 +272,15 @@ public class WatchTimerService extends Service {
 
     /**
      * 开机后显式失效：elapsedRealtime 归零使持久化的段起点失效。
-     * 当日累计保留，重启瞬间的亮屏段不补计。
+     * 真重启时连续线的累计值一并清零（否则残留余额会让倒计时从昨天继续，开机不到
+     * 一个完整周期就弹）；应用升级（MY_PACKAGE_REPLACED）时钟连续，累计原样保留。
+     * 每日累计线不受影响（2 小时线由跨天结算负责）。
      */
-    static void clearSessionStart(Context c) {
-        AppConfig.prefs(c).edit()
+    static void clearSessionStart(Context c, boolean realBoot) {
+        SharedPreferences p = AppConfig.prefs(c);
+        long carry = p.getLong(ST_ACC, 0L);
+        p.edit()
+                .putLong(ST_ACC, DailyWatchStats.accumulatedAfterBoot(carry, realBoot))
                 .putLong(ST_ON_SINCE, -1L)
                 .putLong(ST_OFF_MARK, -1L)
                 .apply();
